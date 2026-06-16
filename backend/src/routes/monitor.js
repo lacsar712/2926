@@ -122,6 +122,205 @@ router.post('/runs/:pipelineId/start', async (req, res) => {
     }
 });
 
+// 对比两次运行
+router.get('/compare', async (req, res) => {
+    try {
+        const { runId1, runId2 } = req.query;
+        if (!runId1 || !runId2) {
+            return res.status(400).json({ success: false, message: '请提供两次运行的ID' });
+        }
+
+        const [run1Rows, run2Rows] = await Promise.all([
+            db.query(
+                'SELECT r.*, p.name as pipeline_name FROM pipeline_run r LEFT JOIN pipeline p ON r.pipeline_id = p.id WHERE r.id = ?',
+                [runId1]
+            ),
+            db.query(
+                'SELECT r.*, p.name as pipeline_name FROM pipeline_run r LEFT JOIN pipeline p ON r.pipeline_id = p.id WHERE r.id = ?',
+                [runId2]
+            )
+        ]);
+
+        if (run1Rows.length === 0) return res.status(404).json({ success: false, message: '运行记录1不存在' });
+        if (run2Rows.length === 0) return res.status(404).json({ success: false, message: '运行记录2不存在' });
+
+        const [nodes1, nodes2] = await Promise.all([
+            db.query('SELECT * FROM node_run_detail WHERE run_id = ? ORDER BY start_time', [runId1]),
+            db.query('SELECT * FROM node_run_detail WHERE run_id = ? ORDER BY start_time', [runId2])
+        ]);
+
+        const run1 = run1Rows[0];
+        const run2 = run2Rows[0];
+
+        const calcDurationMs = (s, e) => {
+            if (!s || !e) return 0;
+            return new Date(e).getTime() - new Date(s).getTime();
+        };
+
+        const run1Duration = calcDurationMs(run1.start_time, run1.end_time);
+        const run2Duration = calcDurationMs(run2.start_time, run2.end_time);
+
+        const summaryDelta = {
+            total_input: {
+                value1: run1.total_input || 0,
+                value2: run2.total_input || 0,
+                delta: (run2.total_input || 0) - (run1.total_input || 0),
+                deltaPercent: run1.total_input ? (((run2.total_input || 0) - run1.total_input) / run1.total_input * 100).toFixed(1) : null
+            },
+            total_output: {
+                value1: run1.total_output || 0,
+                value2: run2.total_output || 0,
+                delta: (run2.total_output || 0) - (run1.total_output || 0),
+                deltaPercent: run1.total_output ? (((run2.total_output || 0) - run1.total_output) / run1.total_output * 100).toFixed(1) : null
+            },
+            error_count: {
+                value1: run1.error_count || 0,
+                value2: run2.error_count || 0,
+                delta: (run2.error_count || 0) - (run1.error_count || 0),
+                deltaPercent: run1.error_count ? (((run2.error_count || 0) - run1.error_count) / run1.error_count * 100).toFixed(1) : null
+            },
+            duration_ms: {
+                value1: run1Duration,
+                value2: run2Duration,
+                delta: run2Duration - run1Duration,
+                deltaPercent: run1Duration ? ((run2Duration - run1Duration) / run1Duration * 100).toFixed(1) : null
+            }
+        };
+
+        const nodeMap1 = {};
+        const nodeMap2 = {};
+        nodes1.forEach(n => { nodeMap1[n.node_id] = n; });
+        nodes2.forEach(n => { nodeMap2[n.node_id] = n; });
+
+        const allNodeIds = [...new Set([...Object.keys(nodeMap1), ...Object.keys(nodeMap2)])];
+
+        const nodeComparisons = allNodeIds.map(nodeId => {
+            const n1 = nodeMap1[nodeId];
+            const n2 = nodeMap2[nodeId];
+            const n1Duration = n1 ? calcDurationMs(n1.start_time, n1.end_time) : 0;
+            const n2Duration = n2 ? calcDurationMs(n2.start_time, n2.end_time) : 0;
+
+            const calcDelta = (v1, v2) => {
+                const val1 = v1 || 0;
+                const val2 = v2 || 0;
+                return {
+                    value1: val1,
+                    value2: val2,
+                    delta: val2 - val1,
+                    deltaPercent: val1 ? ((val2 - val1) / val1 * 100).toFixed(1) : null
+                };
+            };
+
+            return {
+                node_id: nodeId,
+                node_name: n2?.node_name || n1?.node_name,
+                node_type: n2?.node_type || n1?.node_type,
+                exists1: !!n1,
+                exists2: !!n2,
+                status1: n1?.status,
+                status2: n2?.status,
+                input_count: calcDelta(n1?.input_count, n2?.input_count),
+                output_count: calcDelta(n1?.output_count, n2?.output_count),
+                error_count: calcDelta(n1?.error_count, n2?.error_count),
+                duration_ms: calcDelta(n1Duration, n2Duration)
+            };
+        });
+
+        const hasDiff = (item) => item.delta !== 0;
+        const hasNodeDiff = (node) => {
+            return hasDiff(node.input_count) || hasDiff(node.output_count) ||
+                   hasDiff(node.error_count) || hasDiff(node.duration_ms) ||
+                   node.exists1 !== node.exists2;
+        };
+
+        const buildSummary = () => {
+            const parts = [];
+            const outputDelta = summaryDelta.total_output;
+            const errorDelta = summaryDelta.error_count;
+            const durationDelta = summaryDelta.duration_ms;
+
+            if (outputDelta.delta !== 0) {
+                const direction = outputDelta.delta > 0 ? '提升' : '下降';
+                if (outputDelta.deltaPercent !== null) {
+                    parts.push(`输出量${direction} ${Math.abs(outputDelta.deltaPercent)}%`);
+                } else {
+                    parts.push(`输出量${direction} ${Math.abs(outputDelta.delta)}`);
+                }
+            }
+
+            const diffNodes = nodeComparisons.filter(n => hasNodeDiff(n) && n.exists1 && n.exists2);
+            if (diffNodes.length > 0) {
+                const maxDurationNode = diffNodes.reduce((max, n) =>
+                    Math.abs(n.duration_ms.delta) > Math.abs(max.duration_ms.delta) ? n : max
+                , diffNodes[0]);
+                if (maxDurationNode && maxDurationNode.duration_ms.delta !== 0) {
+                    const direction = maxDurationNode.duration_ms.delta > 0 ? '增加' : '减少';
+                    const pct = maxDurationNode.duration_ms.deltaPercent;
+                    if (pct !== null) {
+                        parts.push(`节点「${maxDurationNode.node_name}」耗时${direction} ${Math.abs(pct)}%`);
+                    }
+                }
+            }
+
+            if (errorDelta.delta !== 0) {
+                const direction = errorDelta.delta > 0 ? '增加' : '减少';
+                parts.push(`错误数${direction} ${Math.abs(errorDelta.delta)}`);
+            }
+
+            if (parts.length === 0) {
+                return '两次运行指标基本一致，无显著差异。';
+            }
+
+            return parts.join('，') + '。';
+        };
+
+        res.json({
+            success: true,
+            data: {
+                run1: {
+                    ...run1,
+                    duration_ms: run1Duration
+                },
+                run2: {
+                    ...run2,
+                    duration_ms: run2Duration
+                },
+                summaryDelta,
+                nodeComparisons,
+                textSummary: buildSummary()
+            }
+        });
+    } catch (error) {
+        logger.error('Compare runs error:', { message: error.message });
+        res.status(500).json({ success: false, message: '对比运行失败' });
+    }
+});
+
+// 获取生产线列表（用于级联选择）
+router.get('/pipelines', async (_req, res) => {
+    try {
+        const rows = await db.query('SELECT id, name, status FROM pipeline ORDER BY name');
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        logger.error('Get pipelines error:', { message: error.message });
+        res.status(500).json({ success: false, message: '获取生产线列表失败' });
+    }
+});
+
+// 获取指定生产线的运行记录
+router.get('/pipelines/:pipelineId/runs', async (req, res) => {
+    try {
+        const rows = await db.query(
+            'SELECT id, status, start_time, end_time, total_input, total_output, error_count FROM pipeline_run WHERE pipeline_id = ? ORDER BY start_time DESC LIMIT 50',
+            [req.params.pipelineId]
+        );
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        logger.error('Get pipeline runs error:', { message: error.message });
+        res.status(500).json({ success: false, message: '获取运行记录失败' });
+    }
+});
+
 // 更新运行状态
 router.put('/runs/:runId/status', async (req, res) => {
     try {

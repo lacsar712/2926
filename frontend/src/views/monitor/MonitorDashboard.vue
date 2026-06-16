@@ -2,6 +2,9 @@
   <div class="page-container">
     <div class="page-header fade-in-up">
       <h2 class="page-title">生产线监控</h2>
+      <el-button type="primary" plain :icon="DataAnalysis" @click="$router.push('/monitor/compare')">
+        运行对比
+      </el-button>
     </div>
 
     <!-- 统计卡片 -->
@@ -103,10 +106,13 @@
         <el-table-column label="耗时" width="120">
           <template #default="{ row }">{{ calcDuration(row.start_time, row.end_time) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="100" fixed="right">
+        <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
             <el-button size="small" type="primary" link @click="$router.push(`/monitor/detail/${row.id}`)">
               <el-icon><View /></el-icon>详情
+            </el-button>
+            <el-button size="small" type="success" link @click="addToCompare(row)">
+              <el-icon><DataAnalysis /></el-icon>对比
             </el-button>
           </template>
         </el-table-column>
@@ -117,9 +123,13 @@
 
 <script setup>
 import { ref, onMounted, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
+import { DataAnalysis } from '@element-plus/icons-vue'
 import api from '@/utils/request'
 import dayjs from 'dayjs'
 import * as echarts from 'echarts'
+
+const router = useRouter()
 
 const loading = ref(false)
 const overview = ref({ totalPipelines: 0, runningPipelines: 0, totalRuns: 0, failedRuns: 0 })
@@ -130,6 +140,17 @@ const throughputChart = ref(null)
 const statusChart = ref(null)
 
 const runStatusMap = { running: '运行中', completed: '已完成', failed: '失败', cancelled: '已取消' }
+
+const addToCompare = (row) => {
+  router.push({
+    path: '/monitor/compare',
+    query: {
+      runId: row.id,
+      pipelineId: row.pipeline_id,
+      side: 'right'
+    }
+  })
+}
 const formatDate = (d) => d ? dayjs(d).format('MM-DD HH:mm') : '-'
 const calcDuration = (s, e) => {
   if (!s) return '-'

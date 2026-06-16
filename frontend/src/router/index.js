@@ -49,6 +49,12 @@ const routes = [
                 meta: { title: '监控详情', icon: 'View', activeMenu: '/monitor' }
             },
             {
+                path: 'monitor/compare',
+                name: 'MonitorCompare',
+                component: () => import('@/views/monitor/MonitorCompare.vue'),
+                meta: { title: '运行对比', icon: 'Scale', activeMenu: '/monitor' }
+            },
+            {
                 path: 'system/user',
                 name: 'SystemUser',
                 component: () => import('@/views/system/UserManage.vue'),

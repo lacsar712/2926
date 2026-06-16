@@ -1,12 +1,17 @@
 <template>
   <div class="page-container">
     <div class="page-header fade-in-up">
-      <div style="display: flex; align-items: center; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
         <el-button @click="$router.back()" text><el-icon><ArrowLeft /></el-icon>返回</el-button>
         <h2 class="page-title">{{ runDetail?.pipeline_name || '监控详情' }}</h2>
         <span class="status-badge" :class="runDetail?.status">
           <span class="dot"></span>{{ runStatusMap[runDetail?.status] }}
         </span>
+      </div>
+      <div class="header-actions">
+        <el-button type="primary" plain :icon="DataAnalysis" @click="addToCompare">
+          加入对比
+        </el-button>
       </div>
     </div>
 
@@ -163,11 +168,13 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { DataAnalysis } from '@element-plus/icons-vue'
 import api from '@/utils/request'
 import dayjs from 'dayjs'
 
 const route = useRoute()
+const router = useRouter()
 const runId = route.params.id
 const runDetail = ref(null)
 const nodeDetails = ref([])
@@ -175,6 +182,18 @@ const selectedNodeDetail = ref(null)
 
 const runStatusMap = { running: '运行中', completed: '已完成', failed: '失败', cancelled: '已取消' }
 const nodeStatusMap = { pending: '等待中', running: '运行中', completed: '已完成', failed: '失败' }
+
+const addToCompare = () => {
+  if (!runDetail.value) return
+  router.push({
+    path: '/monitor/compare',
+    query: {
+      runId: runId,
+      pipelineId: runDetail.value.pipeline_id,
+      side: 'right'
+    }
+  })
+}
 
 const calcDuration = (s, e) => {
   if (!s) return '-'
@@ -202,6 +221,18 @@ onMounted(loadDetail)
 </script>
 
 <style scoped>
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .flow-monitor-card, .detail-card, .table-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
