@@ -23,6 +23,10 @@
         active-text-color="#818cf8"
         router
       >
+        <el-menu-item index="/dashboard">
+          <el-icon><Odometer /></el-icon>
+          <template #title>工作台</template>
+        </el-menu-item>
         <el-menu-item index="/templates">
           <el-icon><Collection /></el-icon>
           <template #title>模板库</template>

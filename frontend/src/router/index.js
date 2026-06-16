@@ -10,8 +10,14 @@ const routes = [
     {
         path: '/',
         component: () => import('@/layout/AppLayout.vue'),
-        redirect: '/pipeline',
+        redirect: '/dashboard',
         children: [
+            {
+                path: 'dashboard',
+                name: 'Dashboard',
+                component: () => import('@/views/dashboard/Dashboard.vue'),
+                meta: { title: '工作台', icon: 'Odometer' }
+            },
             {
                 path: 'templates',
                 name: 'Templates',
