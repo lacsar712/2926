@@ -233,6 +233,21 @@ INSERT INTO `operation_log` (`user_id`, `username`, `action`, `target`, `detail`
 (1, 'admin', '创建标签', '知识图谱', '新增标签分类', '192.168.1.100'),
 (3, 'lisi', '查看监控', '金融舆情监控', '查看运行监控数据', '192.168.1.102');
 
+-- 数据质量规则表
+CREATE TABLE IF NOT EXISTS `quality_rule` (
+  `id` INT PRIMARY KEY AUTO_INCREMENT,
+  `name` VARCHAR(100) NOT NULL COMMENT '规则名称',
+  `description` TEXT COMMENT '规则描述',
+  `rule_type` ENUM('not_null','regex','numeric_range','enum') NOT NULL COMMENT '规则类型: not_null非空/regex正则/numeric_range数值范围/enum枚举',
+  `expression` TEXT COMMENT '规则表达式(正则/范围/枚举值)',
+  `severity` ENUM('error','warning') NOT NULL DEFAULT 'warning' COMMENT '严重级别',
+  `enabled` TINYINT DEFAULT 1 COMMENT '1启用 0禁用',
+  `creator_id` INT COMMENT '创建者ID',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`creator_id`) REFERENCES `sys_user`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 示例通知数据
 INSERT INTO `notification` (`user_id`, `type`, `title`, `summary`, `content`, `is_read`, `related_type`, `related_id`, `created_at`) VALUES
 (1, 'publish_success', '生产线「企业知识图谱构建」发布成功', '版本 v3 已成功发布', '生产线「企业知识图谱构建」已成功发布版本 v3。', 0, 'pipeline', 1, DATE_SUB(NOW(), INTERVAL 5 MINUTE)),
@@ -243,3 +258,13 @@ INSERT INTO `notification` (`user_id`, `type`, `title`, `summary`, `content`, `i
 (1, 'publish_success', '生产线「金融舆情监控」发布成功', '版本 v1 已成功发布', '生产线「金融舆情监控」已成功发布版本 v1。', 1, 'pipeline', 3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
 (2, 'system', '欢迎使用数据生产线平台', '您已成功注册账号，开始使用吧！', '欢迎使用数据生产线可视化平台。您可以创建和编排数据生产线，实现数据的自动化处理。', 1, NULL, NULL, DATE_SUB(NOW(), INTERVAL 3 DAY)),
 (3, 'system', '欢迎使用数据生产线平台', '您已成功注册账号，开始使用吧！', '欢迎使用数据生产线可视化平台。您可以查看和监控生产线的运行状态。', 1, NULL, NULL, DATE_SUB(NOW(), INTERVAL 5 DAY));
+
+-- 数据质量规则种子数据
+INSERT INTO `quality_rule` (`name`, `description`, `rule_type`, `expression`, `severity`, `enabled`, `creator_id`) VALUES
+('字段非空校验', '关键字段不允许为空', 'not_null', NULL, 'error', 1, 1),
+('手机号格式校验', '校验中国大陆手机号格式', 'regex', '^1[3-9]\\d{9}$', 'error', 1, 1),
+('邮箱格式校验', '校验标准邮箱格式', 'regex', '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$', 'warning', 1, 1),
+('年龄范围校验', '年龄必须在 0-150 之间', 'numeric_range', '{"min":0,"max":150}', 'warning', 1, 1),
+('性别枚举校验', '性别只允许为 男/女/未知', 'enum', '["男","女","未知"]', 'error', 1, 1),
+('身份证号格式校验', '校验18位身份证号格式', 'regex', '^[1-9]\\d{5}(18|19|20)\\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\\d|3[01])\\d{3}[\\dXx]$', 'error', 1, 1),
+('金额范围校验', '单笔金额必须大于0且不超过100万', 'numeric_range', '{"min":0,"max":1000000}', 'warning', 0, 1);

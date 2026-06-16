@@ -12,6 +12,7 @@ const userRoutes = require('./routes/user');
 const logRoutes = require('./routes/log');
 const notificationRoutes = require('./routes/notification');
 const templateRoutes = require('./routes/template');
+const qualityRuleRoutes = require('./routes/quality-rule');
 
 const { authMiddleware } = require('./middleware/auth');
 
@@ -38,6 +39,7 @@ app.use('/api/users', authMiddleware, userRoutes);
 app.use('/api/logs', authMiddleware, logRoutes);
 app.use('/api/notifications', authMiddleware, notificationRoutes);
 app.use('/api/templates', authMiddleware, templateRoutes);
+app.use('/api/quality-rules', authMiddleware, qualityRuleRoutes);
 
 // 全局错误处理
 app.use((err, _req, res, _next) => {

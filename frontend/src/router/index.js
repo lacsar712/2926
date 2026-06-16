@@ -61,6 +61,12 @@ const routes = [
                 meta: { title: '操作日志', icon: 'Document' }
             },
             {
+                path: 'system/quality-rule',
+                name: 'SystemQualityRule',
+                component: () => import('@/views/system/QualityRuleManage.vue'),
+                meta: { title: '数据质量规则', icon: 'DataAnalysis' }
+            },
+            {
                 path: 'notifications',
                 name: 'Notifications',
                 component: () => import('@/views/notification/NotificationList.vue'),

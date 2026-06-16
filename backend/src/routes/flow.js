@@ -22,8 +22,42 @@ router.get('/:pipelineId', async (req, res) => {
 // 保存编排数据
 router.put('/:pipelineId', roleGuard('admin', 'editor'), async (req, res) => {
     try {
-        const { flowData } = req.body;
+        const { flowData, validateRules = false } = req.body;
         if (!flowData) return res.status(400).json({ success: false, message: '编排数据不能为空' });
+
+        const ruleWarnings = [];
+        if (validateRules && flowData.nodes) {
+            const ruleRows = await db.query('SELECT id, name, enabled FROM quality_rule');
+            const ruleMap = {};
+            ruleRows.forEach(r => { ruleMap[r.id] = r; ruleMap[String(r.id)] = r; });
+
+            flowData.nodes.forEach(node => {
+                const config = node.data?.config;
+                const ruleIds = config?.qualityRuleIds;
+                if (ruleIds && Array.isArray(ruleIds)) {
+                    ruleIds.forEach(rid => {
+                        const rule = ruleMap[rid];
+                        if (!rule) {
+                            ruleWarnings.push({
+                                nodeId: node.id,
+                                nodeLabel: node.data?.label || node.id,
+                                ruleId: rid,
+                                message: `规则ID ${rid} 不存在`
+                            });
+                        } else if (!rule.enabled) {
+                            ruleWarnings.push({
+                                nodeId: node.id,
+                                nodeLabel: node.data?.label || node.id,
+                                ruleId: rid,
+                                ruleName: rule.name,
+                                message: `规则「${rule.name}」已被禁用`
+                            });
+                        }
+                    });
+                }
+            });
+        }
+
         const existing = await db.query('SELECT id FROM pipeline_flow WHERE pipeline_id = ?', [req.params.pipelineId]);
         if (existing.length === 0) {
             await db.query('INSERT INTO pipeline_flow (pipeline_id, flow_data) VALUES (?, ?)',
@@ -33,7 +67,14 @@ router.put('/:pipelineId', roleGuard('admin', 'editor'), async (req, res) => {
                 [JSON.stringify(flowData), req.params.pipelineId]);
         }
         logger.info('Flow saved:', { pipelineId: req.params.pipelineId });
-        res.json({ success: true, message: '保存成功' });
+        const responseData = { success: true, message: '保存成功' };
+        if (validateRules) {
+            responseData.ruleWarnings = ruleWarnings;
+            if (ruleWarnings.length > 0) {
+                responseData.warningSummary = `检测到 ${ruleWarnings.length} 个规则绑定警告`;
+            }
+        }
+        res.json(responseData);
     } catch (error) {
         logger.error('Save flow error:', { message: error.message });
         res.status(500).json({ success: false, message: '保存编排数据失败' });

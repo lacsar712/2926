@@ -96,7 +96,7 @@
           </el-form-item>
           <el-divider>参数配置</el-divider>
           <template v-if="selectedNode.data.config">
-            <el-form-item v-for="(value, key) in selectedNode.data.config" :key="key" :label="configLabels[key] || key">
+            <el-form-item v-for="(value, key) in selectedNode.data.config" :key="key" v-show="key !== 'qualityRuleIds'" :label="configLabels[key] || key">
               <el-switch v-if="typeof value === 'boolean'" v-model="selectedNode.data.config[key]" @change="syncNodeData" />
               <el-input-number v-else-if="typeof value === 'number'" v-model="selectedNode.data.config[key]" :min="0" style="width: 100%" @change="syncNodeData" />
               <el-select v-else-if="Array.isArray(value)" v-model="selectedNode.data.config[key]" multiple allow-create filterable style="width: 100%" @change="syncNodeData">
@@ -105,6 +105,32 @@
               <el-input v-else v-model="selectedNode.data.config[key]" @change="syncNodeData" />
             </el-form-item>
           </template>
+          <el-divider>数据质量</el-divider>
+          <el-form-item label="绑定质量规则">
+            <el-select
+              v-model="selectedNode.data.config.qualityRuleIds"
+              multiple
+              filterable
+              clearable
+              placeholder="选择质量规则"
+              style="width: 100%"
+              @change="syncNodeData"
+            >
+              <el-option
+                v-for="rule in qualityRules"
+                :key="rule.id"
+                :label="`${rule.name} [${rule.rule_type}]`"
+                :value="rule.id"
+              >
+                <span style="float: left">{{ rule.name }}</span>
+                <span style="float: right; color: var(--text-secondary); font-size: 12px">
+                  <el-tag size="small" :type="rule.severity === 'error' ? 'danger' : 'warning'" effect="light">
+                    {{ rule.severity }}
+                  </el-tag>
+                </span>
+              </el-option>
+            </el-select>
+          </el-form-item>
         </el-form>
         <div class="config-actions">
           <el-popconfirm title="确认删除此组件？" @confirm="deleteNode(selectedNode.id)">
@@ -155,6 +181,7 @@ import '@vue-flow/minimap/dist/style.css'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '@/utils/request'
 import dayjs from 'dayjs'
+import { getQualityRules } from '@/api/quality-rule'
 
 const route = useRoute()
 const router = useRouter()
@@ -170,8 +197,16 @@ const historyLoading = ref(false)
 const historyList = ref([])
 const searchComp = ref('')
 const vueFlowRef = ref(null)
+const qualityRules = ref([])
 
 let nodeCounter = 100
+
+const loadQualityRules = async () => {
+  try {
+    const res = await getQualityRules()
+    qualityRules.value = (res.data || []).filter(r => r.enabled)
+  } catch { /* handled */ }
+}
 
 const categories = reactive([
   {
@@ -283,6 +318,8 @@ const miniMapNodeColor = (node) => getCatColor(node.data?.category)
 
 const addNode = (catKey, comp) => {
   const id = `node-${++nodeCounter}`
+  const cfg = JSON.parse(JSON.stringify(comp.config || {}))
+  if (!cfg.qualityRuleIds) cfg.qualityRuleIds = []
   const newNode = {
     id,
     type: 'custom',
@@ -291,7 +328,7 @@ const addNode = (catKey, comp) => {
       category: catKey,
       component: comp.key,
       label: comp.label,
-      config: JSON.parse(JSON.stringify(comp.config))
+      config: cfg
     }
   }
   nodes.value = [...nodes.value, newNode]
@@ -308,6 +345,8 @@ const onDrop = (event) => {
   const { catKey, comp } = JSON.parse(data)
   const bounds = event.currentTarget.getBoundingClientRect()
   const id = `node-${++nodeCounter}`
+  const cfg = JSON.parse(JSON.stringify(comp.config || {}))
+  if (!cfg.qualityRuleIds) cfg.qualityRuleIds = []
   const newNode = {
     id,
     type: 'custom',
@@ -316,7 +355,7 @@ const onDrop = (event) => {
       category: catKey,
       component: comp.key,
       label: comp.label,
-      config: JSON.parse(JSON.stringify(comp.config))
+      config: cfg
     }
   }
   nodes.value = [...nodes.value, newNode]
@@ -348,11 +387,23 @@ const deleteNode = (id) => {
   selectedNode.value = null
 }
 
-const handleSave = async () => {
+const handleSave = async (validateRules = true) => {
   saving.value = true
   try {
-    await api.put(`/flows/${pipelineId}`, { flowData: { nodes: nodes.value, edges: edges.value } })
-    ElMessage.success('保存成功')
+    const res = await api.put(`/flows/${pipelineId}`, {
+      flowData: { nodes: nodes.value, edges: edges.value },
+      validateRules
+    })
+    if (res.warningSummary && res.ruleWarnings && res.ruleWarnings.length > 0) {
+      const warnText = res.ruleWarnings.map(w => `[${w.nodeLabel}] ${w.message}`).join('\n')
+      ElMessageBox.alert(
+        `保存成功，但检测到 ${res.ruleWarnings.length} 个规则绑定警告：\n\n${warnText}`,
+        '保存成功（含警告）',
+        { type: 'warning', confirmButtonText: '知道了' }
+      )
+    } else {
+      ElMessage.success('保存成功')
+    }
   } catch { /* handled */ } finally { saving.value = false }
 }
 
@@ -393,14 +444,19 @@ const loadFlow = async () => {
     const fRes = await api.get(`/flows/${pipelineId}`)
     if (fRes.data?.flow_data) {
       const fd = fRes.data.flow_data
-      nodes.value = (fd.nodes || []).map(n => ({ ...n, type: 'custom' }))
+      nodes.value = (fd.nodes || []).map(n => {
+        const mapped = { ...n, type: 'custom' }
+        if (!mapped.data.config) mapped.data.config = {}
+        if (!mapped.data.config.qualityRuleIds) mapped.data.config.qualityRuleIds = []
+        return mapped
+      })
       edges.value = (fd.edges || []).map(e => ({ ...e, animated: true, style: { stroke: 'var(--primary)', strokeWidth: 2 } }))
       nodeCounter = Math.max(nodeCounter, ...nodes.value.map(n => parseInt(n.id.replace('node-', '')) || 0))
     }
   } catch { /* handled */ }
 }
 
-onMounted(() => { loadFlow(); loadHistory() })
+onMounted(() => { loadFlow(); loadHistory(); loadQualityRules() })
 </script>
 
 <style scoped>
