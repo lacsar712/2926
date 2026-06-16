@@ -79,6 +79,12 @@ const routes = [
                 meta: { title: '数据质量规则', icon: 'DataAnalysis' }
             },
             {
+                path: 'system/component-doc',
+                name: 'SystemComponentDoc',
+                component: () => import('@/views/system/ComponentDocManage.vue'),
+                meta: { title: '组件文档管理', icon: 'Notebook' }
+            },
+            {
                 path: 'notifications',
                 name: 'Notifications',
                 component: () => import('@/views/notification/NotificationList.vue'),

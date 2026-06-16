@@ -14,6 +14,7 @@ const notificationRoutes = require('./routes/notification');
 const templateRoutes = require('./routes/template');
 const qualityRuleRoutes = require('./routes/quality-rule');
 const scheduleRoutes = require('./routes/schedule');
+const componentDocRoutes = require('./routes/component-doc');
 
 const { authMiddleware } = require('./middleware/auth');
 const { initScheduler } = require('./utils/scheduler');
@@ -43,6 +44,7 @@ app.use('/api/notifications', authMiddleware, notificationRoutes);
 app.use('/api/templates', authMiddleware, templateRoutes);
 app.use('/api/quality-rules', authMiddleware, qualityRuleRoutes);
 app.use('/api/schedules', authMiddleware, scheduleRoutes);
+app.use('/api/component-docs', authMiddleware, componentDocRoutes);
 
 // 全局错误处理
 app.use((err, _req, res, _next) => {

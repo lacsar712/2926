@@ -3,7 +3,10 @@
     <!-- 左侧组件面板 -->
     <aside class="component-panel">
       <div class="panel-header">
-        <h3>组件库</h3>
+        <div class="panel-header-row">
+          <h3>组件库</h3>
+          <el-button size="small" text @click="openDocDrawer('')"><el-icon><Document /></el-icon>文档</el-button>
+        </div>
         <el-input v-model="searchComp" placeholder="搜索组件..." size="small" clearable prefix-icon="Search" />
       </div>
       <div class="component-list">
@@ -21,6 +24,7 @@
                 @dragstart="onDragStart($event, cat.key, comp)" @click="addNode(cat.key, comp)">
                 <span class="comp-dot" :style="{ background: cat.color }"></span>
                 <span>{{ comp.label }}</span>
+                <el-icon class="doc-icon" @click.stop="openDocDrawer(comp.key)"><Document /></el-icon>
                 <el-icon class="add-icon"><Plus /></el-icon>
               </div>
             </div>
@@ -164,6 +168,9 @@
         <el-empty v-else description="暂无发布记录" />
       </div>
     </el-drawer>
+
+    <!-- 组件文档抽屉 -->
+    <ComponentDocDrawer v-model="showDocDrawer" :component-type="docComponentType" />
   </div>
 </template>
 
@@ -182,6 +189,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '@/utils/request'
 import dayjs from 'dayjs'
 import { getQualityRules } from '@/api/quality-rule'
+import ComponentDocDrawer from '@/components/ComponentDocDrawer.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -198,6 +206,8 @@ const historyList = ref([])
 const searchComp = ref('')
 const vueFlowRef = ref(null)
 const qualityRules = ref([])
+const showDocDrawer = ref(false)
+const docComponentType = ref('')
 
 let nodeCounter = 100
 
@@ -206,6 +216,11 @@ const loadQualityRules = async () => {
     const res = await getQualityRules()
     qualityRules.value = (res.data || []).filter(r => r.enabled)
   } catch { /* handled */ }
+}
+
+const openDocDrawer = (componentType) => {
+  docComponentType.value = componentType
+  showDocDrawer.value = true
 }
 
 const categories = reactive([
@@ -479,10 +494,15 @@ onMounted(() => { loadFlow(); loadHistory(); loadQualityRules() })
   padding: 16px;
   border-bottom: 1px solid var(--border-color);
 }
+.panel-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
 .panel-header h3 {
   font-size: 14px;
   font-weight: 600;
-  margin-bottom: 10px;
   color: var(--text-primary);
 }
 .component-list {
@@ -552,6 +572,16 @@ onMounted(() => { loadFlow(); loadHistory(); loadQualityRules() })
   transition: opacity 0.2s;
 }
 .comp-item:hover .add-icon { opacity: 1; }
+.doc-icon {
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  color: var(--text-secondary);
+  margin-left: auto;
+}
+.doc-icon:hover { color: var(--primary); }
+.comp-item:hover .doc-icon { opacity: 1; }
+.comp-item:hover .doc-icon + .add-icon { margin-left: 4px; }
 
 /* 画布区域 */
 .canvas-area {

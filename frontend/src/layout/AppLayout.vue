@@ -56,6 +56,10 @@
             <el-icon><Document /></el-icon>
             <template #title>操作日志</template>
           </el-menu-item>
+          <el-menu-item index="/system/component-doc">
+            <el-icon><Notebook /></el-icon>
+            <template #title>组件文档管理</template>
+          </el-menu-item>
         </el-sub-menu>
       </el-menu>
     </aside>
