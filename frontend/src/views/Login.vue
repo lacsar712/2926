@@ -35,8 +35,10 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import api from '@/utils/request'
+import { useNotificationStore } from '@/stores/notification'
 
 const router = useRouter()
+const notificationStore = useNotificationStore()
 const formRef = ref()
 const loading = ref(false)
 const form = reactive({ username: '', password: '' })
@@ -53,6 +55,9 @@ const handleLogin = async () => {
     const res = await api.post('/auth/login', form)
     localStorage.setItem('token', res.data.token)
     localStorage.setItem('userInfo', JSON.stringify(res.data.user))
+    if (res.data.unreadCount !== undefined) {
+      notificationStore.setUnreadCount(res.data.unreadCount)
+    }
     ElMessage.success('登录成功')
     router.push('/')
   } catch {

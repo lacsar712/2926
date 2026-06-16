@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../utils/db');
 const logger = require('../utils/logger');
+const { notifyPipelineRunFailed, getPipelineSubscribers } = require('../utils/notification');
 
 const router = express.Router();
 
@@ -86,6 +87,94 @@ router.get('/pipeline/:pipelineId/flow', async (req, res) => {
     } catch (error) {
         logger.error('Get monitor flow error:', { message: error.message });
         res.status(500).json({ success: false, message: '获取编排数据失败' });
+    }
+});
+
+// 启动生产线运行
+router.post('/runs/:pipelineId/start', async (req, res) => {
+    try {
+        const pipelineId = req.params.pipelineId;
+        const pipelineRows = await db.query('SELECT name, status FROM pipeline WHERE id = ?', [pipelineId]);
+        if (pipelineRows.length === 0) return res.status(404).json({ success: false, message: '生产线不存在' });
+        
+        const pipeline = pipelineRows[0];
+        if (pipeline.status !== 'published') {
+            return res.status(400).json({ success: false, message: '请先发布生产线' });
+        }
+        
+        const result = await db.query(
+            'INSERT INTO pipeline_run (pipeline_id, status, start_time) VALUES (?, ?, NOW())',
+            [pipelineId, 'running']
+        );
+        
+        await db.query('UPDATE pipeline SET status = ? WHERE id = ?', ['running', pipelineId]);
+        
+        await db.query(
+            'INSERT INTO operation_log (user_id, username, action, target, detail, ip) VALUES (?, ?, ?, ?, ?, ?)',
+            [req.user.id, req.user.username, '启动运行', pipeline.name, `启动生产线运行`, req.ip]
+        );
+        
+        logger.info('Pipeline run started:', { pipelineId, runId: result.insertId });
+        res.json({ success: true, data: { runId: result.insertId }, message: '运行已启动' });
+    } catch (error) {
+        logger.error('Start run error:', { message: error.message });
+        res.status(500).json({ success: false, message: '启动运行失败' });
+    }
+});
+
+// 更新运行状态
+router.put('/runs/:runId/status', async (req, res) => {
+    try {
+        const { status, errorCount = 0, totalInput = 0, totalOutput = 0 } = req.body;
+        const runId = req.params.runId;
+        
+        const runRows = await db.query(
+            'SELECT r.*, p.name as pipeline_name, p.id as pipeline_id FROM pipeline_run r LEFT JOIN pipeline p ON r.pipeline_id = p.id WHERE r.id = ?',
+            [runId]
+        );
+        if (runRows.length === 0) return res.status(404).json({ success: false, message: '运行记录不存在' });
+        
+        const run = runRows[0];
+        const updates = [];
+        const params = [];
+        
+        if (status) { updates.push('status = ?'); params.push(status); }
+        if (totalInput) { updates.push('total_input = ?'); params.push(totalInput); }
+        if (totalOutput) { updates.push('total_output = ?'); params.push(totalOutput); }
+        if (errorCount) { updates.push('error_count = ?'); params.push(errorCount); }
+        
+        if (status === 'completed' || status === 'failed' || status === 'cancelled') {
+            updates.push('end_time = NOW()');
+        }
+        
+        if (updates.length > 0) {
+            params.push(runId);
+            await db.query(`UPDATE pipeline_run SET ${updates.join(', ')} WHERE id = ?`, params);
+        }
+        
+        if (status === 'completed' || status === 'failed' || status === 'cancelled') {
+            const newPipelineStatus = status === 'failed' ? 'error' : 'published';
+            await db.query('UPDATE pipeline SET status = ? WHERE id = ?', [newPipelineStatus, run.pipeline_id]);
+        }
+        
+        if (status === 'failed') {
+            const subscribers = await getPipelineSubscribers(run.pipeline_id);
+            if (subscribers.length > 0) {
+                await notifyPipelineRunFailed(
+                    run.pipeline_id,
+                    run.pipeline_name,
+                    runId,
+                    errorCount,
+                    subscribers
+                );
+            }
+        }
+        
+        logger.info('Pipeline run status updated:', { runId, status });
+        res.json({ success: true, message: '状态已更新' });
+    } catch (error) {
+        logger.error('Update run status error:', { message: error.message });
+        res.status(500).json({ success: false, message: '更新运行状态失败' });
     }
 });
 

@@ -10,6 +10,7 @@ const monitorRoutes = require('./routes/monitor');
 const tagRoutes = require('./routes/tag');
 const userRoutes = require('./routes/user');
 const logRoutes = require('./routes/log');
+const notificationRoutes = require('./routes/notification');
 
 const { authMiddleware } = require('./middleware/auth');
 
@@ -34,6 +35,7 @@ app.use('/api/monitor', authMiddleware, monitorRoutes);
 app.use('/api/tags', authMiddleware, tagRoutes);
 app.use('/api/users', authMiddleware, userRoutes);
 app.use('/api/logs', authMiddleware, logRoutes);
+app.use('/api/notifications', authMiddleware, notificationRoutes);
 
 // 全局错误处理
 app.use((err, _req, res, _next) => {

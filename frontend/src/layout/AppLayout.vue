@@ -59,6 +59,9 @@
             <el-breadcrumb-item v-if="$route.meta.title">{{ $route.meta.title }}</el-breadcrumb-item>
           </el-breadcrumb>
         </div>
+        <div class="topbar-actions">
+          <NotificationPanel />
+        </div>
         <div class="user-area">
           <el-dropdown trigger="click" @command="handleCommand">
             <div class="user-info">
@@ -97,6 +100,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import NotificationPanel from '@/components/NotificationPanel.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -228,6 +232,14 @@ const handleCommand = (cmd) => {
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  margin-right: 16px;
 }
 .breadcrumb-area :deep(.el-breadcrumb__inner) {
   color: var(--text-secondary) !important;

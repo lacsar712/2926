@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const db = require('../utils/db');
 const logger = require('../utils/logger');
 const { JWT_SECRET } = require('../middleware/auth');
+const { notifySystem } = require('../utils/notification');
 
 const router = express.Router();
 
@@ -34,12 +35,19 @@ router.post('/login', async (req, res) => {
             'INSERT INTO operation_log (user_id, username, action, target, detail, ip) VALUES (?, ?, ?, ?, ?, ?)',
             [user.id, user.username, '登录系统', '用户认证', '登录成功', req.ip]
         );
+        
+        const [unreadResult] = await db.query(
+            'SELECT COUNT(*) as count FROM notification WHERE user_id = ? AND is_read = 0',
+            [user.id]
+        );
+        
         logger.info('User logged in:', { username: user.username });
         res.json({
             success: true,
             data: {
                 token,
-                user: { id: user.id, username: user.username, nickname: user.nickname, role: user.role, email: user.email, avatar: user.avatar }
+                user: { id: user.id, username: user.username, nickname: user.nickname, role: user.role, email: user.email, avatar: user.avatar },
+                unreadCount: unreadResult.count
             }
         });
     } catch (error) {

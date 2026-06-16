@@ -53,6 +53,12 @@ const routes = [
                 name: 'SystemLog',
                 component: () => import('@/views/system/LogManage.vue'),
                 meta: { title: '操作日志', icon: 'Document' }
+            },
+            {
+                path: 'notifications',
+                name: 'Notifications',
+                component: () => import('@/views/notification/NotificationList.vue'),
+                meta: { title: '通知中心', icon: 'Bell' }
             }
         ]
     }

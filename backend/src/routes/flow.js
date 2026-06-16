@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../utils/db');
 const logger = require('../utils/logger');
 const { roleGuard } = require('../middleware/auth');
+const { notifyPipelinePublish } = require('../utils/notification');
 
 const router = express.Router();
 
@@ -46,8 +47,12 @@ router.post('/:pipelineId/publish', roleGuard('admin', 'editor'), async (req, re
         const flowRows = await db.query('SELECT flow_data FROM pipeline_flow WHERE pipeline_id = ?', [req.params.pipelineId]);
         if (flowRows.length === 0) return res.status(400).json({ success: false, message: '请先编排生产线' });
 
-        const pipelineRows = await db.query('SELECT version FROM pipeline WHERE id = ?', [req.params.pipelineId]);
+        const pipelineRows = await db.query('SELECT version, name, creator_id FROM pipeline WHERE id = ?', [req.params.pipelineId]);
+        if (pipelineRows.length === 0) return res.status(404).json({ success: false, message: '生产线不存在' });
+        
         const newVersion = (pipelineRows[0]?.version || 0) + 1;
+        const pipelineName = pipelineRows[0].name;
+        const creatorId = pipelineRows[0].creator_id;
 
         await db.query('UPDATE pipeline SET status = ?, version = ? WHERE id = ?', ['published', newVersion, req.params.pipelineId]);
         await db.query(
@@ -58,6 +63,15 @@ router.post('/:pipelineId/publish', roleGuard('admin', 'editor'), async (req, re
             'INSERT INTO operation_log (user_id, username, action, target, detail, ip) VALUES (?, ?, ?, ?, ?, ?)',
             [req.user.id, req.user.username, '发布生产线', `Pipeline #${req.params.pipelineId}`, `发布版本v${newVersion}`, req.ip]
         );
+        
+        await notifyPipelinePublish(
+            parseInt(req.params.pipelineId),
+            pipelineName,
+            newVersion,
+            creatorId,
+            req.user.id
+        );
+        
         logger.info('Pipeline published:', { pipelineId: req.params.pipelineId, version: newVersion });
         res.json({ success: true, message: `发布成功，当前版本 v${newVersion}` });
     } catch (error) {

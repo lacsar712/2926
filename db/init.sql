@@ -111,6 +111,24 @@ CREATE TABLE IF NOT EXISTS `operation_log` (
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 通知表
+CREATE TABLE IF NOT EXISTS `notification` (
+  `id` INT PRIMARY KEY AUTO_INCREMENT,
+  `user_id` INT NOT NULL COMMENT '接收用户ID',
+  `type` ENUM('publish_success','run_failed','system') DEFAULT 'system' COMMENT '通知类型',
+  `title` VARCHAR(200) NOT NULL COMMENT '通知标题',
+  `summary` VARCHAR(500) COMMENT '通知摘要',
+  `content` TEXT COMMENT '通知详情',
+  `is_read` TINYINT DEFAULT 0 COMMENT '0未读 1已读',
+  `related_type` VARCHAR(50) COMMENT '关联类型: pipeline/run等',
+  `related_id` INT COMMENT '关联ID',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `read_at` DATETIME,
+  INDEX `idx_user_id` (`user_id`),
+  INDEX `idx_user_read` (`user_id`, `is_read`),
+  FOREIGN KEY (`user_id`) REFERENCES `sys_user`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ============ 种子数据 ============
 
 -- 用户（密码均为 123456 的 bcrypt 哈希）
@@ -178,3 +196,14 @@ INSERT INTO `operation_log` (`user_id`, `username`, `action`, `target`, `detail`
 (2, 'zhangsan', '启动运行', '医疗文献分析流水线', '手动触发运行', '192.168.1.101'),
 (1, 'admin', '创建标签', '知识图谱', '新增标签分类', '192.168.1.100'),
 (3, 'lisi', '查看监控', '金融舆情监控', '查看运行监控数据', '192.168.1.102');
+
+-- 示例通知数据
+INSERT INTO `notification` (`user_id`, `type`, `title`, `summary`, `content`, `is_read`, `related_type`, `related_id`, `created_at`) VALUES
+(1, 'publish_success', '生产线「企业知识图谱构建」发布成功', '版本 v3 已成功发布', '生产线「企业知识图谱构建」已成功发布版本 v3。', 0, 'pipeline', 1, DATE_SUB(NOW(), INTERVAL 5 MINUTE)),
+(1, 'run_failed', '生产线「金融舆情监控」运行失败', '运行过程中出现 5 个错误，请及时处理', '生产线「金融舆情监控」在运行过程中出现异常，共产生 5 个错误。请查看运行详情进行排查。', 0, 'run', 4, DATE_SUB(NOW(), INTERVAL 30 MINUTE)),
+(1, 'system', '系统维护通知', '将于本周五 22:00-24:00 进行系统维护', '为提升系统性能，将于本周五 22:00-24:00 进行系统升级维护，期间服务可能短暂中断。', 0, NULL, NULL, DATE_SUB(NOW(), INTERVAL 2 HOUR)),
+(2, 'publish_success', '生产线「医疗文献分析流水线」发布成功', '版本 v2 已成功发布', '生产线「医疗文献分析流水线」已成功发布版本 v2。', 0, 'pipeline', 2, DATE_SUB(NOW(), INTERVAL 1 HOUR)),
+(2, 'run_failed', '生产线「医疗文献分析流水线」运行失败', '运行过程中出现 8 个错误，请及时处理', '生产线「医疗文献分析流水线」在运行过程中出现异常，共产生 8 个错误。请查看运行详情进行排查。', 1, 'run', 3, DATE_SUB(NOW(), INTERVAL 3 HOUR)),
+(1, 'publish_success', '生产线「金融舆情监控」发布成功', '版本 v1 已成功发布', '生产线「金融舆情监控」已成功发布版本 v1。', 1, 'pipeline', 3, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+(2, 'system', '欢迎使用数据生产线平台', '您已成功注册账号，开始使用吧！', '欢迎使用数据生产线可视化平台。您可以创建和编排数据生产线，实现数据的自动化处理。', 1, NULL, NULL, DATE_SUB(NOW(), INTERVAL 3 DAY)),
+(3, 'system', '欢迎使用数据生产线平台', '您已成功注册账号，开始使用吧！', '欢迎使用数据生产线可视化平台。您可以查看和监控生产线的运行状态。', 1, NULL, NULL, DATE_SUB(NOW(), INTERVAL 5 DAY));
