@@ -37,6 +37,12 @@ const routes = [
                 meta: { title: '生产线监控', icon: 'DataLine' }
             },
             {
+                path: 'schedule',
+                name: 'Schedule',
+                component: () => import('@/views/schedule/ScheduleTaskList.vue'),
+                meta: { title: '调度任务', icon: 'Timer' }
+            },
+            {
                 path: 'monitor/detail/:id',
                 name: 'MonitorDetail',
                 component: () => import('@/views/monitor/MonitorDetail.vue'),

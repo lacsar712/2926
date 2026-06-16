@@ -35,6 +35,10 @@
           <el-icon><DataLine /></el-icon>
           <template #title>生产线监控</template>
         </el-menu-item>
+        <el-menu-item index="/schedule">
+          <el-icon><Timer /></el-icon>
+          <template #title>调度任务</template>
+        </el-menu-item>
         <el-sub-menu index="/system">
           <template #title>
             <el-icon><Setting /></el-icon>

@@ -268,3 +268,46 @@ INSERT INTO `quality_rule` (`name`, `description`, `rule_type`, `expression`, `s
 ('性别枚举校验', '性别只允许为 男/女/未知', 'enum', '["男","女","未知"]', 'error', 1, 1),
 ('身份证号格式校验', '校验18位身份证号格式', 'regex', '^[1-9]\\d{5}(18|19|20)\\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\\d|3[01])\\d{3}[\\dXx]$', 'error', 1, 1),
 ('金额范围校验', '单笔金额必须大于0且不超过100万', 'numeric_range', '{"min":0,"max":1000000}', 'warning', 0, 1);
+
+-- 调度任务表
+CREATE TABLE IF NOT EXISTS `schedule_task` (
+  `id` INT PRIMARY KEY AUTO_INCREMENT,
+  `name` VARCHAR(100) NOT NULL COMMENT '任务名称',
+  `pipeline_id` INT NOT NULL COMMENT '关联生产线ID',
+  `environment` ENUM('dev','test','prod') DEFAULT 'test' COMMENT '运行环境',
+  `cron_expression` VARCHAR(50) NOT NULL COMMENT 'cron表达式',
+  `enabled` TINYINT DEFAULT 1 COMMENT '1启用 0禁用',
+  `retry_count` INT DEFAULT 0 COMMENT '失败重试次数',
+  `timeout_minutes` INT DEFAULT 60 COMMENT '超时分钟数',
+  `last_run_time` DATETIME COMMENT '上次触发时间',
+  `next_run_time` DATETIME COMMENT '下次触发时间',
+  `last_run_result` ENUM('success','failed','running','none') DEFAULT 'none' COMMENT '最近运行结果',
+  `created_by` INT COMMENT '创建者ID',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`pipeline_id`) REFERENCES `pipeline`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`created_by`) REFERENCES `sys_user`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 任务执行历史表
+CREATE TABLE IF NOT EXISTS `schedule_task_history` (
+  `id` INT PRIMARY KEY AUTO_INCREMENT,
+  `task_id` INT NOT NULL COMMENT '任务ID',
+  `trigger_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '触发时间',
+  `run_id` INT COMMENT '关联的pipeline_run ID',
+  `status` ENUM('pending','running','success','failed','timeout') DEFAULT 'pending' COMMENT '执行状态',
+  `error_message` TEXT COMMENT '错误信息',
+  `retry_attempt` INT DEFAULT 0 COMMENT '重试次数',
+  `duration_seconds` INT COMMENT '执行耗时(秒)',
+  FOREIGN KEY (`task_id`) REFERENCES `schedule_task`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`run_id`) REFERENCES `pipeline_run`(`id`) ON DELETE SET NULL,
+  INDEX `idx_task_id` (`task_id`),
+  INDEX `idx_trigger_time` (`trigger_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 调度任务种子数据
+INSERT INTO `schedule_task` (`name`, `pipeline_id`, `environment`, `cron_expression`, `enabled`, `retry_count`, `timeout_minutes`, `created_by`) VALUES
+('每日知识图谱构建', 1, 'prod', '0 0 2 * * ?', 1, 2, 120, 1),
+('每小时医疗文献分析', 2, 'test', '0 0 * * * ?', 1, 1, 60, 2),
+('每日金融舆情监控', 3, 'prod', '0 0 6 * * ?', 1, 0, 30, 1),
+('每周电商评论分析', 4, 'dev', '0 0 8 ? * MON', 0, 1, 90, 2);

@@ -13,8 +13,10 @@ const logRoutes = require('./routes/log');
 const notificationRoutes = require('./routes/notification');
 const templateRoutes = require('./routes/template');
 const qualityRuleRoutes = require('./routes/quality-rule');
+const scheduleRoutes = require('./routes/schedule');
 
 const { authMiddleware } = require('./middleware/auth');
+const { initScheduler } = require('./utils/scheduler');
 
 const app = express();
 const PORT = 3001;
@@ -40,6 +42,7 @@ app.use('/api/logs', authMiddleware, logRoutes);
 app.use('/api/notifications', authMiddleware, notificationRoutes);
 app.use('/api/templates', authMiddleware, templateRoutes);
 app.use('/api/quality-rules', authMiddleware, qualityRuleRoutes);
+app.use('/api/schedules', authMiddleware, scheduleRoutes);
 
 // 全局错误处理
 app.use((err, _req, res, _next) => {
@@ -51,6 +54,7 @@ const startServer = async () => {
     try {
         await db.testConnection();
         logger.info('Database connection established');
+        await initScheduler();
         app.listen(PORT, '0.0.0.0', () => {
             logger.info(`Server running on port ${PORT}`);
         });
