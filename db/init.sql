@@ -111,6 +111,21 @@ CREATE TABLE IF NOT EXISTS `operation_log` (
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 模板表
+CREATE TABLE IF NOT EXISTS `template` (
+  `id` INT PRIMARY KEY AUTO_INCREMENT,
+  `name` VARCHAR(100) NOT NULL COMMENT '模板名称',
+  `description` TEXT COMMENT '模板描述',
+  `category` VARCHAR(50) COMMENT '分类标签',
+  `flow_data` JSON COMMENT '模板编排数据',
+  `node_count` INT DEFAULT 0 COMMENT '节点数量',
+  `status` ENUM('online','offline') DEFAULT 'offline' COMMENT 'online上架 offline下架',
+  `creator_id` INT COMMENT '创建者ID',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`creator_id`) REFERENCES `sys_user`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 通知表
 CREATE TABLE IF NOT EXISTS `notification` (
   `id` INT PRIMARY KEY AUTO_INCREMENT,
@@ -130,6 +145,27 @@ CREATE TABLE IF NOT EXISTS `notification` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============ 种子数据 ============
+
+-- 模板数据
+INSERT INTO `template` (`name`, `description`, `category`, `flow_data`, `node_count`, `status`, `creator_id`) VALUES
+('文本清洗入库', '对原始文本数据进行清洗、去重、归一化处理后存入数据库，适用于数据预处理场景', '数据处理',
+ '{"nodes":[{"id":"node-1","type":"custom","position":{"x":80,"y":200},"data":{"category":"data-access","component":"file-reader","label":"文件读取","config":{}}},{"id":"node-2","type":"custom","position":{"x":350,"y":120},"data":{"category":"data-preprocess","component":"data-cleaner","label":"数据清洗","config":{"removeNull":true,"removeDuplicate":true}}},{"id":"node-3","type":"custom","position":{"x":350,"y":280},"data":{"category":"data-preprocess","component":"text-normalizer","label":"文本归一化","config":{}}},{"id":"node-4","type":"custom","position":{"x":620,"y":200},"data":{"category":"data-access","component":"database-writer","label":"数据入库","config":{}}}],"edges":[{"id":"e1-2","source":"node-1","target":"node-2","animated":true},{"id":"e1-3","source":"node-1","target":"node-3","animated":true},{"id":"e2-4","source":"node-2","target":"node-4","animated":true},{"id":"e3-4","source":"node-3","target":"node-4","animated":true}]}',
+ 4, 'online', 1),
+('实体关系抽取', '从文本中自动识别命名实体并抽取实体间的语义关系，支持多种实体类型和关系类型', '知识抽取',
+ '{"nodes":[{"id":"node-1","type":"custom","position":{"x":80,"y":200},"data":{"category":"data-access","component":"text-reader","label":"文本读取","config":{}}},{"id":"node-2","type":"custom","position":{"x":350,"y":200},"data":{"category":"data-preprocess","component":"text-splitter","label":"文本分段","config":{}}},{"id":"node-3","type":"custom","position":{"x":620,"y":120},"data":{"category":"entity-extract","component":"ner-model","label":"实体识别","config":{}}},{"id":"node-4","type":"custom","position":{"x":620,"y":280},"data":{"category":"relation-build","component":"relation-extractor","label":"关系抽取","config":{}}},{"id":"node-5","type":"custom","position":{"x":890,"y":200},"data":{"category":"data-browse","component":"result-viewer","label":"结果展示","config":{}}}],"edges":[{"id":"e1-2","source":"node-1","target":"node-2","animated":true},{"id":"e2-3","source":"node-2","target":"node-3","animated":true},{"id":"e2-4","source":"node-2","target":"node-4","animated":true},{"id":"e3-5","source":"node-3","target":"node-5","animated":true},{"id":"e4-5","source":"node-4","target":"node-5","animated":true}]}',
+ 5, 'online', 1),
+('知识图谱构建', '从多源异构数据中抽取实体和关系，构建领域知识图谱并存储到图数据库', '知识图谱',
+ '{"nodes":[{"id":"node-1","type":"custom","position":{"x":80,"y":200},"data":{"category":"data-access","component":"database-reader","label":"数据源读取","config":{}}},{"id":"node-2","type":"custom","position":{"x":350,"y":120},"data":{"category":"data-preprocess","component":"data-cleaner","label":"数据清洗","config":{}}},{"id":"node-3","type":"custom","position":{"x":350,"y":280},"data":{"category":"data-preprocess","component":"text-normalizer","label":"文本归一化","config":{}}},{"id":"node-4","type":"custom","position":{"x":620,"y":120},"data":{"category":"entity-extract","component":"ner-model","label":"实体识别","config":{}}},{"id":"node-5","type":"custom","position":{"x":620,"y":280},"data":{"category":"relation-build","component":"relation-extractor","label":"关系抽取","config":{}}},{"id":"node-6","type":"custom","position":{"x":890,"y":200},"data":{"category":"knowledge-production","component":"kg-builder","label":"图谱构建","config":{}}},{"id":"node-7","type":"custom","position":{"x":1160,"y":200},"data":{"category":"data-browse","component":"graph-viewer","label":"图谱浏览","config":{}}}],"edges":[{"id":"e1-2","source":"node-1","target":"node-2","animated":true},{"id":"e1-3","source":"node-1","target":"node-3","animated":true},{"id":"e2-4","source":"node-2","target":"node-4","animated":true},{"id":"e3-5","source":"node-3","target":"node-5","animated":true},{"id":"e4-6","source":"node-4","target":"node-6","animated":true},{"id":"e5-6","source":"node-5","target":"node-6","animated":true},{"id":"e6-7","source":"node-6","target":"node-7","animated":true}]}',
+ 7, 'online', 1),
+('情感分析流水线', '对文本数据进行情感倾向分析，支持正面、负面、中性三分类，可批量处理', '文本分析',
+ '{"nodes":[{"id":"node-1","type":"custom","position":{"x":80,"y":200},"data":{"category":"data-access","component":"file-reader","label":"数据导入","config":{}}},{"id":"node-2","type":"custom","position":{"x":350,"y":200},"data":{"category":"data-preprocess","component":"text-cleaner","label":"文本清洗","config":{}}},{"id":"node-3","type":"custom","position":{"x":620,"y":200},"data":{"category":"model-labeling","component":"sentiment-model","label":"情感分析","config":{}}},{"id":"node-4","type":"custom","position":{"x":890,"y":200},"data":{"category":"data-browse","component":"data-dashboard","label":"分析看板","config":{}}}],"edges":[{"id":"e1-2","source":"node-1","target":"node-2","animated":true},{"id":"e2-3","source":"node-2","target":"node-3","animated":true},{"id":"e3-4","source":"node-3","target":"node-4","animated":true}]}',
+ 4, 'online', 1),
+('数据脱敏处理', '对敏感数据进行脱敏处理，支持手机号、身份证、地址等多种敏感信息类型', '数据处理',
+ '{"nodes":[{"id":"node-1","type":"custom","position":{"x":80,"y":200},"data":{"category":"data-access","component":"database-reader","label":"数据读取","config":{}}},{"id":"node-2","type":"custom","position":{"x":350,"y":200},"data":{"category":"data-preprocess","component":"data-masker","label":"数据脱敏","config":{}}},{"id":"node-3","type":"custom","position":{"x":620,"y":200},"data":{"category":"data-access","component":"database-writer","label":"结果输出","config":{}}}],"edges":[{"id":"e1-2","source":"node-1","target":"node-2","animated":true},{"id":"e2-3","source":"node-2","target":"node-3","animated":true}]}',
+ 3, 'online', 1),
+('文档智能分类', '基于机器学习模型对文档进行自动分类，支持自定义分类体系和批量处理', '文本分析',
+ '{"nodes":[{"id":"node-1","type":"custom","position":{"x":80,"y":200},"data":{"category":"data-access","component":"file-reader","label":"文档读取","config":{}}},{"id":"node-2","type":"custom","position":{"x":350,"y":120},"data":{"category":"data-preprocess","component":"text-extractor","label":"文本提取","config":{}}},{"id":"node-3","type":"custom","position":{"x":350,"y":280},"data":{"category":"data-preprocess","component":"feature-extractor","label":"特征提取","config":{}}},{"id":"node-4","type":"custom","position":{"x":620,"y":200},"data":{"category":"model-labeling","component":"text-classifier","label":"文本分类","config":{}}},{"id":"node-5","type":"custom","position":{"x":890,"y":200},"data":{"category":"data-browse","component":"result-viewer","label":"分类结果","config":{}}}],"edges":[{"id":"e1-2","source":"node-1","target":"node-2","animated":true},{"id":"e1-3","source":"node-1","target":"node-3","animated":true},{"id":"e2-4","source":"node-2","target":"node-4","animated":true},{"id":"e3-4","source":"node-3","target":"node-4","animated":true},{"id":"e4-5","source":"node-4","target":"node-5","animated":true}]}',
+ 5, 'offline', 1);
 
 -- 用户（密码均为 123456 的 bcrypt 哈希）
 INSERT INTO `sys_user` (`username`, `password`, `nickname`, `email`, `phone`, `role`, `status`) VALUES

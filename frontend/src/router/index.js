@@ -13,6 +13,12 @@ const routes = [
         redirect: '/pipeline',
         children: [
             {
+                path: 'templates',
+                name: 'Templates',
+                component: () => import('@/views/template/TemplateLibrary.vue'),
+                meta: { title: '模板库', icon: 'Collection' }
+            },
+            {
                 path: 'pipeline',
                 name: 'Pipeline',
                 component: () => import('@/views/pipeline/PipelineList.vue'),
