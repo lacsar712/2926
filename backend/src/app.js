@@ -17,6 +17,7 @@ const scheduleRoutes = require('./routes/schedule');
 const componentDocRoutes = require('./routes/component-doc');
 const dashboardRoutes = require('./routes/dashboard');
 const profileRoutes = require('./routes/profile');
+const searchRoutes = require('./routes/search');
 
 const { authMiddleware } = require('./middleware/auth');
 const { initScheduler } = require('./utils/scheduler');
@@ -49,6 +50,7 @@ app.use('/api/schedules', authMiddleware, scheduleRoutes);
 app.use('/api/component-docs', authMiddleware, componentDocRoutes);
 app.use('/api/dashboard', authMiddleware, dashboardRoutes);
 app.use('/api/profile', authMiddleware, profileRoutes);
+app.use('/api/search', authMiddleware, searchRoutes);
 
 // 全局错误处理
 app.use((err, _req, res, _next) => {

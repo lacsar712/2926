@@ -75,6 +75,7 @@
             <el-breadcrumb-item v-if="$route.meta.title">{{ $route.meta.title }}</el-breadcrumb-item>
           </el-breadcrumb>
         </div>
+        <GlobalSearch />
         <div class="topbar-actions">
           <NotificationPanel />
         </div>
@@ -121,6 +122,7 @@
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import NotificationPanel from '@/components/NotificationPanel.vue'
+import GlobalSearch from '@/components/GlobalSearch.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -260,14 +262,16 @@ const handleCommand = (cmd) => {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-left: auto;
-  margin-right: 16px;
+  margin-left: 16px;
 }
 .breadcrumb-area :deep(.el-breadcrumb__inner) {
   color: var(--text-secondary) !important;
 }
 .breadcrumb-area :deep(.el-breadcrumb__inner.is-link) {
   color: var(--text-secondary) !important;
+}
+.topbar :deep(.global-search) {
+  margin-left: auto;
 }
 .user-info {
   display: flex;
