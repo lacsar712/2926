@@ -16,6 +16,7 @@ const qualityRuleRoutes = require('./routes/quality-rule');
 const scheduleRoutes = require('./routes/schedule');
 const componentDocRoutes = require('./routes/component-doc');
 const dashboardRoutes = require('./routes/dashboard');
+const profileRoutes = require('./routes/profile');
 
 const { authMiddleware } = require('./middleware/auth');
 const { initScheduler } = require('./utils/scheduler');
@@ -47,6 +48,7 @@ app.use('/api/quality-rules', authMiddleware, qualityRuleRoutes);
 app.use('/api/schedules', authMiddleware, scheduleRoutes);
 app.use('/api/component-docs', authMiddleware, componentDocRoutes);
 app.use('/api/dashboard', authMiddleware, dashboardRoutes);
+app.use('/api/profile', authMiddleware, profileRoutes);
 
 // 全局错误处理
 app.use((err, _req, res, _next) => {

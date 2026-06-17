@@ -144,6 +144,18 @@ CREATE TABLE IF NOT EXISTS `notification` (
   FOREIGN KEY (`user_id`) REFERENCES `sys_user`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 用户偏好设置表
+CREATE TABLE IF NOT EXISTS `user_preference` (
+  `id` INT PRIMARY KEY AUTO_INCREMENT,
+  `user_id` INT NOT NULL UNIQUE COMMENT '用户ID',
+  `theme` ENUM('light','dark','system') DEFAULT 'dark' COMMENT '主题偏好',
+  `page_size` INT DEFAULT 10 COMMENT '列表默认分页大小',
+  `auto_save` TINYINT DEFAULT 1 COMMENT '编排自动保存开关 1开启 0关闭',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`user_id`) REFERENCES `sys_user`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ============ 种子数据 ============
 
 -- 模板数据

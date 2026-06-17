@@ -93,6 +93,10 @@
                   <el-icon><User /></el-icon>
                   {{ userInfo?.username }} ({{ roleLabel }})
                 </el-dropdown-item>
+                <el-dropdown-item divided command="profile">
+                  <el-icon><UserFilled /></el-icon>
+                  个人中心
+                </el-dropdown-item>
                 <el-dropdown-item divided command="logout">
                   <el-icon><SwitchButton /></el-icon>
                   退出登录
@@ -133,7 +137,9 @@ const roleLabel = computed(() => {
 })
 
 const handleCommand = (cmd) => {
-  if (cmd === 'logout') {
+  if (cmd === 'profile') {
+    router.push('/profile')
+  } else if (cmd === 'logout') {
     localStorage.removeItem('token')
     localStorage.removeItem('userInfo')
     router.push('/login')

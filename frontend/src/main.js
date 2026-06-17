@@ -8,6 +8,7 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import App from './App.vue'
 import router from './router'
 import './styles/global.css'
+import { usePreferenceStore } from './stores/preference'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -19,5 +20,9 @@ app.use(ElementPlus, { locale: zhCn })
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
     app.component(key, component)
 }
+
+const preferenceStore = usePreferenceStore()
+preferenceStore.initTheme()
+preferenceStore.fetchPreference().catch(() => {})
 
 app.mount('#app')

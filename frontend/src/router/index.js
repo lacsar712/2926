@@ -95,6 +95,12 @@ const routes = [
                 name: 'Notifications',
                 component: () => import('@/views/notification/NotificationList.vue'),
                 meta: { title: '通知中心', icon: 'Bell' }
+            },
+            {
+                path: 'profile',
+                name: 'Profile',
+                component: () => import('@/views/profile/Profile.vue'),
+                meta: { title: '个人中心', icon: 'User' }
             }
         ]
     }

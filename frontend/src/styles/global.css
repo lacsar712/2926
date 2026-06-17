@@ -2,6 +2,29 @@
     --primary: #6366f1;
     --primary-light: #818cf8;
     --primary-dark: #4f46e5;
+    --bg-dark: #f8fafc;
+    --bg-card: #ffffff;
+    --bg-sidebar: #f1f5f9;
+    --bg-hover: #e2e8f0;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --text-tertiary: #94a3b8;
+    --border-color: #e2e8f0;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --info: #3b82f6;
+    --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
+    --gradient-bg: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #f8fafc 100%);
+    --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.08);
+    --shadow-hover: 0 8px 32px rgba(99, 102, 241, 0.15);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --radius-md: 10px;
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html.dark {
     --bg-dark: #0f172a;
     --bg-card: #1e293b;
     --bg-sidebar: #1a1f36;
@@ -10,18 +33,9 @@
     --text-secondary: #94a3b8;
     --text-tertiary: #64748b;
     --border-color: #334155;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --danger: #ef4444;
-    --info: #3b82f6;
-    --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
     --gradient-bg: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
     --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.3);
     --shadow-hover: 0 8px 32px rgba(99, 102, 241, 0.2);
-    --radius: 12px;
-    --radius-sm: 8px;
-    --radius-md: 10px;
-    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * {
@@ -36,6 +50,7 @@ body {
     color: var(--text-primary);
     min-height: 100vh;
     overflow: hidden;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 #app {
@@ -62,7 +77,6 @@ body {
     background: var(--text-secondary);
 }
 
-/* Element Plus 深色主题覆盖 */
 .el-button--primary {
     background: var(--gradient-primary) !important;
     border: none !important;
@@ -98,12 +112,10 @@ body {
     --el-table-border-color: var(--border-color) !important;
 }
 
-/* 去除斑马纹 */
 .el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
     background: var(--bg-card) !important;
 }
 
-/* 操作按钮去掉背景色 */
 .el-button--small.is-plain {
     background: transparent !important;
     border-color: transparent !important;
@@ -189,7 +201,22 @@ body {
     border: none !important;
 }
 
-/* 页面容器 */
+.el-tabs__item {
+    color: var(--text-secondary) !important;
+}
+
+.el-tabs__item.is-active {
+    color: var(--primary) !important;
+}
+
+.el-tabs__active-bar {
+    background-color: var(--primary) !important;
+}
+
+.el-tabs__nav-wrap::after {
+    background-color: var(--border-color) !important;
+}
+
 .page-container {
     padding: 24px;
     height: 100%;
@@ -212,7 +239,6 @@ body {
     background-clip: text;
 }
 
-/* 统计卡片 */
 .stat-card {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
@@ -252,7 +278,6 @@ body {
     color: var(--text-secondary);
 }
 
-/* 动画 */
 @keyframes fadeInUp {
     from {
         opacity: 0;
@@ -285,7 +310,6 @@ body {
     animation: pulse 2s infinite;
 }
 
-/* 状态徽标 */
 .status-badge {
     display: inline-flex;
     align-items: center;
@@ -364,4 +388,23 @@ body {
 
 .status-badge.failed .dot {
     background: #ef4444;
+}
+
+.el-dropdown-menu {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border-color) !important;
+    --el-dropdown-menuItem-hover-bg: var(--bg-hover) !important;
+    --el-dropdown-menuItem-color: var(--text-primary) !important;
+}
+
+.el-dropdown-menu__item {
+    color: var(--text-primary) !important;
+}
+
+.el-dropdown-menu__item.is-disabled {
+    color: var(--text-tertiary) !important;
+}
+
+.el-switch.is-checked .el-switch__core {
+    background-color: var(--primary) !important;
 }
