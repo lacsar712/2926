@@ -590,3 +590,34 @@ INSERT INTO `pipeline_comment` (`pipeline_id`, `user_id`, `content`, `reply_to_i
 (2, 1, '## 医疗文献分析流水线说明\n\n本流水线用于处理医学文献数据，已内置医学实体识别模型。\n\n**注意事项：**\n1. PDF 文件需确保文本可复制\n2. 敏感数据请先脱敏处理\n3. 批处理大小建议不超过 100', NULL, 1, NOW(), 1),
 (2, 2, '模型准确率大概是多少？我们对准确率要求比较高。', NULL, 0, NULL, NULL),
 (3, 2, '金融数据源的 API 密钥已更新，请各位注意配置。', NULL, 0, NULL, NULL);
+
+-- 审批记录表
+CREATE TABLE IF NOT EXISTS `approval_record` (
+  `id` INT PRIMARY KEY AUTO_INCREMENT,
+  `type` ENUM('pipeline_publish','pipeline_delete','template_online','user_role_change') NOT NULL COMMENT '审批类型',
+  `title` VARCHAR(200) NOT NULL COMMENT '审批标题',
+  `related_id` INT COMMENT '关联业务ID',
+  `related_data` JSON COMMENT '关联业务快照',
+  `applicant_id` INT NOT NULL COMMENT '申请人ID',
+  `applicant_name` VARCHAR(100) COMMENT '申请人名称快照',
+  `approver_id` INT NOT NULL COMMENT '审批人ID',
+  `status` ENUM('pending','approved','rejected') DEFAULT 'pending' COMMENT '审批状态',
+  `remark` TEXT COMMENT '申请说明',
+  `approve_remark` TEXT COMMENT '审批说明',
+  `approved_at` DATETIME COMMENT '审批时间',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_approver_status` (`approver_id`, `status`),
+  INDEX `idx_applicant` (`applicant_id`),
+  INDEX `idx_created` (`created_at`),
+  FOREIGN KEY (`applicant_id`) REFERENCES `sys_user`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`approver_id`) REFERENCES `sys_user`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 审批种子数据
+INSERT INTO `approval_record` (`type`, `title`, `related_id`, `related_data`, `applicant_id`, `applicant_name`, `approver_id`, `status`, `remark`, `approve_remark`, `approved_at`) VALUES
+('pipeline_publish', '申请发布生产线「企业知识图谱构建」v4', 1, '{"version":4,"status":"draft"}', 2, '张三', 1, 'pending', '新增了实体消歧规则，申请发布新版本 v4，预计提升识别准确率 5%。', NULL, NULL),
+('pipeline_delete', '申请删除生产线「电商评论分析」', 4, '{"status":"draft"}', 2, '张三', 1, 'pending', '该生产线不再使用，业务已迁移至金融舆情监控。', NULL, NULL),
+('user_role_change', '申请提升用户李四角色为编辑者', 3, '{"currentRole":"viewer","targetRole":"editor"}', 2, '张三', 1, 'pending', '李四需要参与生产线编辑工作，申请提升权限。', NULL, NULL),
+('template_online', '申请上线模板「文档智能分类」', NULL, NULL, 2, '张三', 1, 'approved', '该模板已通过测试，可投入生产。', '已通过审核', '2026-06-15 10:30:00'),
+('pipeline_publish', '申请发布生产线「金融舆情监控」v2', 3, '{"version":2}', 2, '张三', 1, 'rejected', 'v2 增加了新闻来源但需要补充风控名单过滤。', '缺少风控黑名单数据源接入，整改后重新提交。', '2026-06-14 16:20:00');

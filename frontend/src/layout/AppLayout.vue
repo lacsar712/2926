@@ -78,6 +78,10 @@
             <el-icon><Notebook /></el-icon>
             <template #title>组件文档管理</template>
           </el-menu-item>
+          <el-menu-item index="/approval">
+            <el-icon><CircleCheck /></el-icon>
+            <template #title>审批队列</template>
+          </el-menu-item>
         </el-sub-menu>
       </el-menu>
     </aside>

@@ -12,7 +12,7 @@
         </el-tag>
       </div>
       <div class="time-range-switch">
-        <el-radio-group v-model="daysRange" size="small" @change="loadSummary">
+        <el-radio-group v-model="daysRange" size="small" @change="onDaysChange">
           <el-radio-button :value="7">近 7 天</el-radio-button>
           <el-radio-button :value="14">近 14 天</el-radio-button>
           <el-radio-button :value="30">近 30 天</el-radio-button>
@@ -21,15 +21,18 @@
     </div>
 
     <div class="stat-cards fade-in-up">
-      <div class="stat-card" v-for="card in statCards" :key="card.key">
+      <div class="stat-card" v-for="card in statCards" :key="card.key"
+           :class="{ 'no-sparkline': card.noSparkline }">
         <div class="stat-icon" :style="{ background: card.bgColor }">
           <el-icon :size="24" :color="card.iconColor"><component :is="card.icon" /></el-icon>
         </div>
         <div class="stat-info">
           <h3>{{ card.value }}</h3>
           <p>{{ card.label }}</p>
+          <p v-if="card.note" class="stat-note">{{ card.note }}</p>
         </div>
-        <div class="stat-sparkline" :ref="el => setChartRef(card.key, el)"></div>
+        <div v-if="!card.noSparkline" class="stat-sparkline"
+             :ref="el => setChartRef(card.key, el)"></div>
       </div>
     </div>
 
@@ -84,22 +87,25 @@
             <h3><el-icon><Promotion /></el-icon> 快捷操作</h3>
           </div>
           <div class="section-body">
-            <el-button type="primary" size="large" class="action-btn" @click="$router.push('/pipeline')">
+            <el-button type="primary" size="large" class="action-btn" @click="goCreatePipeline">
               <el-icon><Plus /></el-icon>创建生产线
             </el-button>
             <el-button size="large" class="action-btn" @click="$router.push('/monitor')">
               <el-icon><DataLine /></el-icon>查看监控
             </el-button>
+            <el-button size="large" class="action-btn" @click="$router.push('/approval')">
+              <el-icon><CircleCheck /></el-icon>审批队列
+              <el-badge v-if="summary.pendingApprovalCount > 0" :value="summary.pendingApprovalCount" :max="99" class="action-badge" />
+            </el-button>
             <el-button size="large" class="action-btn" @click="$router.push('/notifications')">
               <el-icon><Bell /></el-icon>通知中心
-              <el-badge v-if="summary.pendingCount > 0" :value="summary.pendingCount" :max="99" class="action-badge" />
             </el-button>
           </div>
         </div>
 
         <div class="section-card trend-chart-card">
           <div class="section-header">
-            <h3><el-icon><TrendCharts /></el-icon> 运行趋势</h3>
+            <h3><el-icon><TrendCharts /></el-icon> 运行趋势（近 {{ daysRange }} 天）</h3>
           </div>
           <div class="section-body">
             <div ref="trendChartRef" class="trend-chart"></div>
@@ -114,7 +120,12 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import dayjs from 'dayjs'
+import { useRouter } from 'vue-router'
+import { ElMessageBox } from 'element-plus'
 import { getDashboardSummary } from '@/api/dashboard'
+import api from '@/utils/request'
+
+const router = useRouter()
 
 const loading = ref(false)
 const daysRange = ref(7)
@@ -123,7 +134,9 @@ const summary = reactive({
   todayRunCount: 0,
   pendingCount: 0,
   failedRunCount: 0,
-  trend: { labels: [], run: [], failed: [] },
+  pendingApprovalCount: 0,
+  fixedRunTrend: { labels: [], data: [] },
+  failedTrend: { labels: [], data: [] },
   recentPipelines: [],
   recentFailedRuns: []
 })
@@ -157,38 +170,49 @@ const statCards = computed(() => [
   {
     key: 'pipeline',
     label: '我的生产线数',
+    note: '累计数量（不受时间范围影响）',
     value: summary.pipelineCount,
     icon: 'Share',
     bgColor: 'rgba(99, 102, 241, 0.15)',
     iconColor: '#818cf8',
-    data: summary.trend.run
+    trend: summary.fixedRunTrend,
+    fixed: true,
+    noSparkline: false
   },
   {
     key: 'todayRun',
     label: '今日运行次数',
+    note: '当天 00:00 至今',
     value: summary.todayRunCount,
     icon: 'VideoPlay',
     bgColor: 'rgba(16, 185, 129, 0.15)',
     iconColor: '#10b981',
-    data: summary.trend.run
+    trend: summary.fixedRunTrend,
+    fixed: true,
+    noSparkline: false
   },
   {
     key: 'pending',
     label: '待处理事项',
+    note: '未读通知 + 待我审批',
     value: summary.pendingCount,
     icon: 'Bell',
     bgColor: 'rgba(245, 158, 11, 0.15)',
     iconColor: '#f59e0b',
-    data: summary.trend.run
+    fixed: true,
+    noSparkline: true
   },
   {
     key: 'failed',
     label: `近 ${daysRange.value} 日失败运行`,
+    note: '随右上角时间范围变化',
     value: summary.failedRunCount,
     icon: 'WarningFilled',
     bgColor: 'rgba(239, 68, 68, 0.15)',
     iconColor: '#ef4444',
-    data: summary.trend.failed
+    trend: summary.failedTrend,
+    fixed: false,
+    noSparkline: false
   }
 ])
 
@@ -198,51 +222,97 @@ const setChartRef = (key, el) => {
 }
 
 const sparklineInstances = {}
+const fixedSparklinesRendered = ref(false)
 const trendChartRef = ref()
 let trendInstance = null
 
 const formatDate = (d) => d ? dayjs(d).format('MM-DD HH:mm') : '-'
+
+const goCreatePipeline = async () => {
+  try {
+    await ElMessageBox.prompt('请输入生产线名称', '新建生产线', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      inputPattern: /.+/,
+      inputErrorMessage: '名称不能为空',
+      inputValidator: (v) => v && v.trim().length > 0 || '名称不能为空'
+    }).then(async ({ value }) => {
+      const res = await api.post('/pipelines', { name: value.trim() })
+      router.push(`/pipeline/flow/${res.data.id}`)
+    }).catch(() => {})
+  } catch (_e) {
+    router.push('/pipeline')
+  }
+}
 
 const loadSummary = async () => {
   loading.value = true
   try {
     const res = await getDashboardSummary({ days: daysRange.value })
     Object.assign(summary, res.data)
+    if (!summary.fixedRunTrend) summary.fixedRunTrend = { labels: [], data: [] }
+    if (!summary.failedTrend) summary.failedTrend = { labels: [], data: [] }
     await nextTick()
-    renderSparklines()
+    renderSparklines(false)
     renderTrendChart()
   } catch { /* handled */ } finally { loading.value = false }
 }
 
-const renderSparklines = () => {
+const onDaysChange = async () => {
+  loading.value = true
+  try {
+    const res = await getDashboardSummary({ days: daysRange.value })
+    summary.failedRunCount = res.data.failedRunCount
+    summary.failedTrend = res.data.failedTrend || { labels: [], data: [] }
+    summary.recentPipelines = res.data.recentPipelines
+    summary.recentFailedRuns = res.data.recentFailedRuns
+    await nextTick()
+    renderSparklines(true)
+    renderTrendChart()
+  } catch { /* handled */ } finally { loading.value = false }
+}
+
+const buildSparklineOption = (card, trend) => {
+  const data = trend?.data || []
+  return {
+    grid: { top: 5, right: 0, bottom: 5, left: 0 },
+    xAxis: { show: false, type: 'category', data: data.map((_, i) => i) },
+    yAxis: { show: false, type: 'value', min: 0 },
+    series: [{
+      type: 'line',
+      data,
+      smooth: true,
+      symbol: 'none',
+      lineStyle: { width: 2, color: card.iconColor },
+      areaStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: card.iconColor + '40' },
+          { offset: 1, color: card.iconColor + '05' }
+        ])
+      }
+    }],
+    tooltip: { show: false }
+  }
+}
+
+const renderSparklines = (onlyDynamic = false) => {
   statCards.value.forEach(card => {
+    if (card.noSparkline) return
+    if (onlyDynamic && card.fixed) return
     const el = chartRefs[card.key]
     if (!el) return
+    if (!onlyDynamic && card.fixed && fixedSparklinesRendered.value && sparklineInstances[card.key]) {
+      return
+    }
     if (sparklineInstances[card.key]) {
       sparklineInstances[card.key].dispose()
     }
     const chart = echarts.init(el)
     sparklineInstances[card.key] = chart
-    const data = card.data || []
-    chart.setOption({
-      grid: { top: 5, right: 0, bottom: 5, left: 0 },
-      xAxis: { show: false, type: 'category', data: data.map((_, i) => i) },
-      yAxis: { show: false, type: 'value', min: 0 },
-      series: [{
-        type: 'line',
-        data,
-        smooth: true,
-        symbol: 'none',
-        lineStyle: { width: 2, color: card.iconColor },
-        areaStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: card.iconColor + '40' },
-            { offset: 1, color: card.iconColor + '05' }
-          ])
-        }
-      }],
-      tooltip: { show: false }
-    })
+    chart.setOption(buildSparklineOption(card, card.trend))
+    if (!onlyDynamic && card.fixed) {
+      fixedSparklinesRendered.value = true
+    }
   })
 }
 
@@ -250,6 +320,12 @@ const renderTrendChart = () => {
   if (!trendChartRef.value) return
   if (trendInstance) trendInstance.dispose()
   trendInstance = echarts.init(trendChartRef.value)
+
+  const labels = summary.failedTrend?.labels || []
+  const failedData = summary.failedTrend?.data || []
+  const totalDays = labels.length
+  const runData = new Array(totalDays).fill(0)
+
   trendInstance.setOption({
     grid: { top: 30, right: 16, bottom: 24, left: 36 },
     tooltip: {
@@ -263,11 +339,12 @@ const renderTrendChart = () => {
       right: 0,
       textStyle: { color: '#94a3b8', fontSize: 12 },
       itemWidth: 16,
-      itemHeight: 8
+      itemHeight: 8,
+      data: ['失败数']
     },
     xAxis: {
       type: 'category',
-      data: summary.trend.labels,
+      data: labels,
       axisLine: { lineStyle: { color: '#334155' } },
       axisLabel: { color: '#64748b', fontSize: 11 },
       axisTick: { show: false }
@@ -281,31 +358,15 @@ const renderTrendChart = () => {
     },
     series: [
       {
-        name: '运行数',
+        name: '失败数',
         type: 'bar',
-        data: summary.trend.run,
+        data: failedData,
         barWidth: 12,
         itemStyle: {
           borderRadius: [4, 4, 0, 0],
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: '#818cf8' },
-            { offset: 1, color: '#6366f1' }
-          ])
-        }
-      },
-      {
-        name: '失败数',
-        type: 'line',
-        data: summary.trend.failed,
-        smooth: true,
-        symbol: 'circle',
-        symbolSize: 6,
-        lineStyle: { width: 2, color: '#ef4444' },
-        itemStyle: { color: '#ef4444' },
-        areaStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(239, 68, 68, 0.2)' },
-            { offset: 1, color: 'rgba(239, 68, 68, 0)' }
+            { offset: 0, color: '#f87171' },
+            { offset: 1, color: '#ef4444' }
           ])
         }
       }
@@ -400,6 +461,29 @@ onBeforeUnmount(() => {
   border-color: var(--primary);
   transform: translateY(-2px);
   box-shadow: var(--shadow-hover);
+}
+
+.stat-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.stat-info h3 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.stat-info p {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.stat-note {
+  font-size: 11px !important;
+  color: var(--text-tertiary) !important;
+  margin-top: 2px;
+  opacity: 0.85;
 }
 
 .stat-sparkline {

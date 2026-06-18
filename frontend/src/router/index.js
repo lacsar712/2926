@@ -91,6 +91,12 @@ const routes = [
                 meta: { title: '组件文档管理', icon: 'Notebook' }
             },
             {
+                path: 'approval',
+                name: 'ApprovalQueue',
+                component: () => import('@/views/approval/ApprovalQueue.vue'),
+                meta: { title: '审批队列', icon: 'CircleCheck' }
+            },
+            {
                 path: 'notifications',
                 name: 'Notifications',
                 component: () => import('@/views/notification/NotificationList.vue'),
