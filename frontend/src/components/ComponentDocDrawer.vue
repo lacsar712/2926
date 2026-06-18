@@ -159,6 +159,16 @@ watch(() => props.modelValue, (val) => {
   }
 })
 
+watch(() => props.componentType, (newType, oldType) => {
+  if (newType && newType !== oldType && visible.value) {
+    loadDocByType(newType).then(() => {
+      if (currentDoc.value) {
+        activeCategory.value = currentDoc.value.category
+      }
+    })
+  }
+})
+
 watch(visible, (val) => {
   emit('update:modelValue', val)
 })

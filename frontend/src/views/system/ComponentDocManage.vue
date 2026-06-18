@@ -2,6 +2,7 @@
   <div class="page-container">
     <div class="page-header fade-in-up">
       <h2 class="page-title">组件文档管理</h2>
+      <el-button type="primary" @click="goToEditor"><el-icon><MagicStick /></el-icon>前往编排页查看</el-button>
     </div>
 
     <div class="filter-bar fade-in-up">
@@ -89,10 +90,13 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
 import { getComponentDocs, updateComponentDoc } from '@/api/component-doc'
 import ComponentDocDrawer from '@/components/ComponentDocDrawer.vue'
+
+const router = useRouter()
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -209,6 +213,10 @@ const handleSave = async () => {
 const previewDoc = (doc) => {
   previewComponentType.value = doc.component_type
   showPreview.value = true
+}
+
+const goToEditor = () => {
+  router.push('/pipeline/flow/1')
 }
 
 onMounted(loadList)
