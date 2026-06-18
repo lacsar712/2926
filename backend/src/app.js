@@ -5,6 +5,7 @@ const db = require('./utils/db');
 
 const authRoutes = require('./routes/auth');
 const pipelineRoutes = require('./routes/pipeline');
+const pipelineCommentRoutes = require('./routes/pipeline-comment');
 const flowRoutes = require('./routes/flow');
 const monitorRoutes = require('./routes/monitor');
 const tagRoutes = require('./routes/tag');
@@ -38,6 +39,7 @@ app.use('/api/auth', authRoutes);
 
 // 需要认证的路由
 app.use('/api/pipelines', authMiddleware, pipelineRoutes);
+app.use('/api/pipeline-comments', authMiddleware, pipelineCommentRoutes);
 app.use('/api/flows', authMiddleware, flowRoutes);
 app.use('/api/monitor', authMiddleware, monitorRoutes);
 app.use('/api/tags', authMiddleware, tagRoutes);

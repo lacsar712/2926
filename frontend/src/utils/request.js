@@ -30,11 +30,14 @@ api.interceptors.response.use(
     },
     (error) => {
         if (error.response) {
-            const { status, data } = error.response
-            if (status === 401) {
+            const { status, data, config } = error.response
+            const isLoginRequest = config?.url?.includes('/auth/login')
+            if (status === 401 && !isLoginRequest) {
                 localStorage.removeItem('token')
                 localStorage.removeItem('userInfo')
-                router.push('/login')
+                if (router.currentRoute.value.path !== '/login') {
+                    router.push('/login')
+                }
                 ElMessage.error('登录已过期，请重新登录')
             } else {
                 ElMessage.error(data?.message || `请求错误 (${status})`)

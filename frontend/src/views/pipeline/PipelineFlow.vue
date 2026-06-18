@@ -42,6 +42,11 @@
           <span class="pipeline-name">{{ pipelineName }}</span>
         </div>
         <div class="toolbar-right">
+          <el-button size="small" plain @click="showCommentDrawer = true">
+            <el-badge :value="commentCount" :hidden="commentCount === 0" class="toolbar-badge">
+              <el-icon><ChatDotRound /></el-icon>讨论
+            </el-badge>
+          </el-button>
           <el-button size="small" plain @click="handleCheck"><el-icon><CircleCheck /></el-icon>检查</el-button>
           <el-button size="small" plain @click="handleSave" :loading="saving"><el-icon><FolderOpened /></el-icon>保存</el-button>
           <el-button size="small" type="primary" @click="handlePublish"><el-icon><Upload /></el-icon>发布</el-button>
@@ -171,11 +176,14 @@
 
     <!-- 组件文档抽屉 -->
     <ComponentDocDrawer v-model="showDocDrawer" :component-type="docComponentType" />
+
+    <!-- 讨论抽屉 -->
+    <PipelineCommentDrawer v-model="showCommentDrawer" :pipeline-id="pipelineId" />
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, markRaw } from 'vue'
+import { ref, reactive, computed, onMounted, markRaw, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { VueFlow, useVueFlow, Position, ConnectionMode, Handle } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
@@ -189,7 +197,9 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '@/utils/request'
 import dayjs from 'dayjs'
 import { getQualityRules } from '@/api/quality-rule'
+import { getCommentSummary } from '@/api/pipeline-comment'
 import ComponentDocDrawer from '@/components/ComponentDocDrawer.vue'
+import PipelineCommentDrawer from '@/components/PipelineCommentDrawer.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -208,6 +218,8 @@ const vueFlowRef = ref(null)
 const qualityRules = ref([])
 const showDocDrawer = ref(false)
 const docComponentType = ref('')
+const showCommentDrawer = ref(false)
+const commentCount = ref(0)
 
 let nodeCounter = 100
 
@@ -216,6 +228,13 @@ const loadQualityRules = async () => {
     const res = await getQualityRules()
     qualityRules.value = (res.data || []).filter(r => r.enabled)
   } catch { /* handled */ }
+}
+
+const loadCommentCount = async () => {
+  try {
+    const res = await getCommentSummary(pipelineId)
+    commentCount.value = res.data?.comment_count || 0
+  } catch { commentCount.value = 0 }
 }
 
 const openDocDrawer = (componentType) => {
@@ -471,7 +490,11 @@ const loadFlow = async () => {
   } catch { /* handled */ }
 }
 
-onMounted(() => { loadFlow(); loadHistory(); loadQualityRules() })
+onMounted(() => { loadFlow(); loadHistory(); loadQualityRules(); loadCommentCount() })
+
+watch(showCommentDrawer, (val) => {
+  if (!val) loadCommentCount()
+})
 </script>
 
 <style scoped>
@@ -725,4 +748,8 @@ onMounted(() => { loadFlow(); loadHistory(); loadQualityRules() })
 .slide-enter-active, .slide-leave-active { transition: all 0.3s ease; overflow: hidden; }
 .slide-enter-from, .slide-leave-to { max-height: 0; opacity: 0; }
 .slide-enter-to, .slide-leave-from { max-height: 500px; opacity: 1; }
+
+.toolbar-badge :deep(.el-badge__content) {
+  transform: translate(8px, -8px);
+}
 </style>

@@ -25,10 +25,9 @@ router.get('/', async (req, res) => {
     const [countResult] = await db.query(countSql, params);
     const total = countResult.total;
     
-    const limit = parseInt(pageSize);
+    const limit = parseInt(pageSize) || 10;
     const offset = (parseInt(page) - 1) * limit;
-    sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
-    params.push(limit, offset);
+    sql += ` ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
     
     const list = await db.query(sql, params);
     
@@ -51,10 +50,11 @@ router.get('/recent', async (req, res) => {
   try {
     const userId = req.user.id;
     const { limit = 5 } = req.query;
-    
+    const limitNum = Math.min(parseInt(limit) || 5, 50);
+
     const list = await db.query(
-      'SELECT * FROM notification WHERE user_id = ? ORDER BY created_at DESC LIMIT ?',
-      [userId, parseInt(limit)]
+      `SELECT * FROM notification WHERE user_id = ? ORDER BY created_at DESC LIMIT ${limitNum}`,
+      [userId]
     );
     
     res.json({ success: true, data: list });

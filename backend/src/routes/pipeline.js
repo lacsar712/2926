@@ -24,13 +24,40 @@ router.get('/', async (req, res) => {
         const offset = (parseInt(page) - 1) * limit;
         sql += ` ORDER BY p.updated_at DESC LIMIT ${limit} OFFSET ${offset}`;
         const rows = await db.query(sql, params);
-        // 获取每个生产线的标签
         for (const row of rows) {
             const tags = await db.query(
                 'SELECT t.* FROM tag t INNER JOIN pipeline_tag pt ON t.id = pt.tag_id WHERE pt.pipeline_id = ?',
                 [row.id]
             );
             row.tags = tags;
+            const commentSummary = await db.query(`
+                SELECT 
+                    COUNT(pc.id) as comment_count,
+                (SELECT content FROM pipeline_comment 
+                 WHERE pipeline_id = ? AND is_pinned = 0 
+                 ORDER BY created_at DESC LIMIT 1) as latest_content,
+                (SELECT u.nickname FROM pipeline_comment pc
+                 LEFT JOIN sys_user u ON pc.user_id = u.id
+                 WHERE pc.pipeline_id = ? AND pc.is_pinned = 0
+                 ORDER BY pc.created_at DESC LIMIT 1) as latest_user,
+                (SELECT created_at FROM pipeline_comment 
+                 WHERE pipeline_id = ? AND is_pinned = 0
+                 ORDER BY created_at DESC LIMIT 1) as latest_time
+                FROM pipeline_comment pc
+                WHERE pc.pipeline_id = ?
+            `, [row.id, row.id, row.id, row.id]);
+            if (commentSummary[0]) {
+                const cs = commentSummary[0];
+                row.comment_count = cs.comment_count || 0;
+                row.latest_comment = cs.latest_content ? {
+                    content: cs.latest_content.substring(0, 100),
+                    user_nickname: cs.latest_user,
+                    created_at: cs.latest_time
+                } : null;
+            } else {
+                row.comment_count = 0;
+                row.latest_comment = null;
+            }
         }
         res.json({ success: true, data: { list: rows, total, page: parseInt(page), pageSize: parseInt(pageSize) } });
     } catch (error) {

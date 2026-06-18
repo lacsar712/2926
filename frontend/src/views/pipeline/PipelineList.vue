@@ -47,6 +47,16 @@
           <span><el-icon><Clock /></el-icon>{{ formatDate(item.updated_at) }}</span>
           <span>v{{ item.version }}</span>
         </div>
+        <div v-if="item.comment_count > 0" class="card-comment">
+          <div class="comment-header">
+            <el-icon><ChatDotRound /></el-icon>
+            <span class="comment-count">{{ item.comment_count }} 条讨论</span>
+          </div>
+          <div v-if="item.latest_comment" class="comment-preview">
+            <span class="comment-user">{{ item.latest_comment.user_nickname }}：</span>
+            <span class="comment-text">{{ truncateText(item.latest_comment.content, 60) }}</span>
+          </div>
+        </div>
         <div class="card-actions">
           <el-button size="small" type="primary" plain @click="$router.push(`/pipeline/flow/${item.id}`)">
             <el-icon><EditPen /></el-icon>编排
@@ -117,6 +127,10 @@ const form = reactive({ name: '', description: '', tagIds: [] })
 const formRules = { name: [{ required: true, message: '请输入名称', trigger: 'blur' }] }
 
 const formatDate = (d) => d ? dayjs(d).format('YYYY-MM-DD HH:mm') : '-'
+const truncateText = (text, max = 60) => {
+  if (!text) return ''
+  return text.length > max ? text.substring(0, max) + '...' : text
+}
 
 const loadList = async () => {
   loading.value = true
@@ -235,6 +249,40 @@ onMounted(() => { loadList(); loadTags() })
   align-items: center;
   gap: 4px;
 }
+.card-comment {
+  background: var(--bg-hover);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 4px;
+}
+.comment-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--primary);
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+.comment-count {
+  font-size: 11px;
+}
+.comment-preview {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.comment-user {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.comment-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .card-actions {
   display: flex;
   gap: 8px;

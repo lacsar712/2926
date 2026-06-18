@@ -42,8 +42,8 @@ router.get('/', async (req, res) => {
         );
         total = countResult[0].total;
         rows = await db.query(
-          'SELECT id, name, description, status FROM pipeline WHERE name LIKE ? OR description LIKE ? ORDER BY updated_at DESC LIMIT ? OFFSET ?',
-          [like, like, limit, offset]
+          `SELECT id, name, description, status FROM pipeline WHERE name LIKE ? OR description LIKE ? ORDER BY updated_at DESC LIMIT ${limit} OFFSET ${offset}`,
+          [like, like]
         );
         groups.push({
           type: 'pipeline',
@@ -67,8 +67,8 @@ router.get('/', async (req, res) => {
         );
         total = countResult[0].total;
         rows = await db.query(
-          'SELECT id, name, color FROM tag WHERE name LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
-          [like, limit, offset]
+          `SELECT id, name, color FROM tag WHERE name LIKE ? ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`,
+          [like]
         );
         groups.push({
           type: 'tag',
@@ -92,8 +92,8 @@ router.get('/', async (req, res) => {
         );
         total = countResult[0].total;
         rows = await db.query(
-          'SELECT id, username, nickname, role FROM sys_user WHERE username LIKE ? OR nickname LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
-          [like, like, limit, offset]
+          `SELECT id, username, nickname, role FROM sys_user WHERE username LIKE ? OR nickname LIKE ? ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`,
+          [like, like]
         );
         groups.push({
           type: 'user',
@@ -117,8 +117,8 @@ router.get('/', async (req, res) => {
         );
         total = countResult[0].total;
         rows = await db.query(
-          'SELECT id, action, target, detail, created_at FROM operation_log WHERE action LIKE ? OR target LIKE ? OR detail LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
-          [like, like, like, limit, offset]
+          `SELECT id, action, target, detail, created_at FROM operation_log WHERE action LIKE ? OR target LIKE ? OR detail LIKE ? ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`,
+          [like, like, like]
         );
         groups.push({
           type: 'log',

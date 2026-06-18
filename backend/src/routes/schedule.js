@@ -62,14 +62,15 @@ router.get('/:id', async (req, res) => {
 router.get('/:id/history', async (req, res) => {
     try {
         const { limit = 20 } = req.query;
+        const limitNum = Math.min(parseInt(limit) || 20, 100);
         const rows = await db.query(
             `SELECT h.*, pr.status as run_status 
              FROM schedule_task_history h 
              LEFT JOIN pipeline_run pr ON h.run_id = pr.id 
              WHERE h.task_id = ? 
              ORDER BY h.trigger_time DESC 
-             LIMIT ?`,
-            [req.params.id, parseInt(limit)]
+             LIMIT ${limitNum}`,
+            [req.params.id]
         );
         res.json({ success: true, data: rows });
     } catch (error) {

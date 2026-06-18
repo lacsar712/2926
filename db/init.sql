@@ -181,9 +181,9 @@ INSERT INTO `template` (`name`, `description`, `category`, `flow_data`, `node_co
 
 -- 用户（密码均为 123456 的 bcrypt 哈希）
 INSERT INTO `sys_user` (`username`, `password`, `nickname`, `email`, `phone`, `role`, `status`) VALUES
-('admin', '$2a$10$V7zTEvGyQpcpykMmLuIds.SDpxvYpFhVnbTCrK8z2VuLcoX7WSPOq', '系统管理员', 'admin@pipeline.com', '13800138000', 'admin', 1),
-('zhangsan', '$2a$10$V7zTEvGyQpcpykMmLuIds.SDpxvYpFhVnbTCrK8z2VuLcoX7WSPOq', '张三', 'zhangsan@pipeline.com', '13800138001', 'editor', 1),
-('lisi', '$2a$10$V7zTEvGyQpcpykMmLuIds.SDpxvYpFhVnbTCrK8z2VuLcoX7WSPOq', '李四', 'lisi@pipeline.com', '13800138002', 'viewer', 1);
+('admin', '$2a$10$Or/j635DVqZvsqHZIxryKujpgXo2Ghe.mjS.6EzmOVXBc4eChvucW', '系统管理员', 'admin@pipeline.com', '13800138000', 'admin', 1),
+('zhangsan', '$2a$10$Or/j635DVqZvsqHZIxryKujpgXo2Ghe.mjS.6EzmOVXBc4eChvucW', '张三', 'zhangsan@pipeline.com', '13800138001', 'editor', 1),
+('lisi', '$2a$10$Or/j635DVqZvsqHZIxryKujpgXo2Ghe.mjS.6EzmOVXBc4eChvucW', '李四', 'lisi@pipeline.com', '13800138002', 'viewer', 1);
 
 -- 标签
 INSERT INTO `tag` (`name`, `color`) VALUES
@@ -557,3 +557,34 @@ INSERT INTO `component_doc` (`component_type`, `category`, `name`, `description`
  '{"template":"default","format":"pdf","includeCharts":true}',
  '[{"q":"如何自定义报告模板？","a":"在模板管理中创建新模板，支持变量占位符和条件渲染。"},{"q":"PDF中文显示异常？","a":"确保服务器安装了中文字体包。"}]',
  1);
+
+-- 生产线评论表
+CREATE TABLE IF NOT EXISTS `pipeline_comment` (
+  `id` INT PRIMARY KEY AUTO_INCREMENT,
+  `pipeline_id` INT NOT NULL COMMENT '关联生产线ID',
+  `user_id` INT NOT NULL COMMENT '评论用户ID',
+  `content` TEXT NOT NULL COMMENT '评论内容（支持@提及和引用标记）',
+  `reply_to_id` INT DEFAULT NULL COMMENT '回复的目标评论ID',
+  `is_pinned` TINYINT DEFAULT 0 COMMENT '是否置顶 0否 1是',
+  `pinned_at` DATETIME DEFAULT NULL COMMENT '置顶时间',
+  `pinned_by` INT DEFAULT NULL COMMENT '置顶操作人ID',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_pipeline_id` (`pipeline_id`),
+  INDEX `idx_user_id` (`user_id`),
+  INDEX `idx_pinned` (`pipeline_id`, `is_pinned`),
+  FOREIGN KEY (`pipeline_id`) REFERENCES `pipeline`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`user_id`) REFERENCES `sys_user`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`reply_to_id`) REFERENCES `pipeline_comment`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`pinned_by`) REFERENCES `sys_user`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 评论种子数据
+INSERT INTO `pipeline_comment` (`pipeline_id`, `user_id`, `content`, `reply_to_id`, `is_pinned`, `pinned_at`, `pinned_by`) VALUES
+(1, 1, '## 使用说明\n\n本生产线用于构建企业知识图谱，请遵循以下规范：\n- 数据源配置请联系 @系统管理员 \n- 模型参数调整需经过测试验证\n- 发布前请先运行检查\n\n如有问题请在下方留言讨论。', NULL, 1, NOW(), 1),
+(1, 2, '请问这个生产线支持增量更新吗？我们有大量历史数据需要处理。', NULL, 0, NULL, NULL),
+(1, 1, '@张三 支持增量更新的，在 kg-builder 组件中启用 upsert 模式即可。建议先跑全量，之后每天调度增量任务。', 2, 0, NULL, NULL),
+(1, 2, '好的，谢谢！另外想问下 Neo4j 的连接池大小在哪里配置？', NULL, 0, NULL, NULL),
+(2, 1, '## 医疗文献分析流水线说明\n\n本流水线用于处理医学文献数据，已内置医学实体识别模型。\n\n**注意事项：**\n1. PDF 文件需确保文本可复制\n2. 敏感数据请先脱敏处理\n3. 批处理大小建议不超过 100', NULL, 1, NOW(), 1),
+(2, 2, '模型准确率大概是多少？我们对准确率要求比较高。', NULL, 0, NULL, NULL),
+(3, 2, '金融数据源的 API 密钥已更新，请各位注意配置。', NULL, 0, NULL, NULL);

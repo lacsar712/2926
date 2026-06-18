@@ -32,12 +32,9 @@ const getTemplateList = async (req, res, isAdmin = false) => {
             params.push(category);
         }
 
-        const countSql = sql.replace(
-            'SELECT t.id, t.name, t.description, t.category, t.node_count, t.status, t.flow_data, t.created_at, t.updated_at, u.nickname as creator_name',
-            'SELECT COUNT(*) as total'
-        );
-        const [countResult] = await db.query(countSql, params);
-        const total = countResult.total;
+        const countSql = sql.replace(/SELECT[\s\S]+?FROM/i, 'SELECT COUNT(*) as total FROM');
+        const countRows = await db.query(countSql, params);
+        const total = countRows[0]?.total ?? 0;
 
         const limit = parseInt(pageSize);
         const offset = (parseInt(page) - 1) * limit;
