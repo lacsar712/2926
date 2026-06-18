@@ -112,6 +112,7 @@ const formatTime = (time) => {
 const handleVisibleChange = (visible) => {
   if (visible) {
     loading.value = true
+    notificationStore.fetchUnreadCount()
     notificationStore.fetchRecentNotifications(5).finally(() => {
       loading.value = false
     })

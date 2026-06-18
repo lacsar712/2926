@@ -51,11 +51,18 @@ export const useNotificationStore = defineStore('notification', () => {
   const markNotificationRead = async (id) => {
     try {
       await markAsRead(id)
+      let wasUnread = false
       const item = recentNotifications.value.find(n => n.id === id)
-      if (item) item.is_read = 1
+      if (item) {
+        if (item.is_read === 0) wasUnread = true
+        item.is_read = 1
+      }
       const listItem = notificationList.value.find(n => n.id === id)
-      if (listItem) listItem.is_read = 1
-      if (unreadCount.value > 0) unreadCount.value--
+      if (listItem) {
+        if (listItem.is_read === 0) wasUnread = true
+        listItem.is_read = 1
+      }
+      if (wasUnread && unreadCount.value > 0) unreadCount.value--
     } catch (error) {
       console.error('标记已读失败:', error)
       throw error
@@ -64,6 +71,9 @@ export const useNotificationStore = defineStore('notification', () => {
 
   const markBatchRead = async (ids) => {
     try {
+      const actuallyUnreadCount = notificationList.value.filter(
+        n => ids.includes(n.id) && n.is_read === 0
+      ).length
       await markBatchAsRead(ids)
       recentNotifications.value.forEach(n => {
         if (ids.includes(n.id)) n.is_read = 1
@@ -71,7 +81,7 @@ export const useNotificationStore = defineStore('notification', () => {
       notificationList.value.forEach(n => {
         if (ids.includes(n.id)) n.is_read = 1
       })
-      unreadCount.value = Math.max(0, unreadCount.value - ids.length)
+      unreadCount.value = Math.max(0, unreadCount.value - actuallyUnreadCount)
     } catch (error) {
       console.error('批量标记已读失败:', error)
       throw error
