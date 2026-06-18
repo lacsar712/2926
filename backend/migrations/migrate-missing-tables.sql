@@ -1,4 +1,4 @@
-﻿-- 增量迁移：补齐缺失表结构（可重复执行）
+-- 增量迁移：补齐缺失表结构（可重复执行）
 SET NAMES utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `quality_rule` (

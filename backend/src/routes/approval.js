@@ -38,10 +38,9 @@ router.get('/', async (req, res) => {
     const [countRow] = await db.query(countSql, params);
     const total = countRow.total;
 
-    const limit = parseInt(pageSize);
-    const offset = (parseInt(page) - 1) * limit;
-    sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
-    params.push(limit, offset);
+    const limit = parseInt(pageSize, 10) || 10;
+    const offset = ((parseInt(page, 10) || 1) - 1) * limit;
+    sql += ` ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
 
     const rows = await db.query(sql, params);
     rows.forEach(r => { r.typeLabel = typeMap[r.type] || r.type; });

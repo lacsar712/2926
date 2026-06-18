@@ -23,6 +23,8 @@ const approvalRoutes = require('./routes/approval');
 
 const { authMiddleware } = require('./middleware/auth');
 const { initScheduler } = require('./utils/scheduler');
+const { ensureSeedData } = require('./utils/seed');
+const { runMigrations } = require('./utils/migrate');
 
 const app = express();
 const PORT = 3001;
@@ -66,6 +68,8 @@ const startServer = async () => {
     try {
         await db.testConnection();
         logger.info('Database connection established');
+        await ensureSeedData();
+        await runMigrations();
         await initScheduler();
         app.listen(PORT, '0.0.0.0', () => {
             logger.info(`Server running on port ${PORT}`);

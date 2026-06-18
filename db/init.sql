@@ -181,9 +181,9 @@ INSERT INTO `template` (`name`, `description`, `category`, `flow_data`, `node_co
 
 -- 用户（密码均为 123456 的 bcrypt 哈希）
 INSERT INTO `sys_user` (`username`, `password`, `nickname`, `email`, `phone`, `role`, `status`) VALUES
-('admin', '$2a$10$Or/j635DVqZvsqHZIxryKujpgXo2Ghe.mjS.6EzmOVXBc4eChvucW', '系统管理员', 'admin@pipeline.com', '13800138000', 'admin', 1),
-('zhangsan', '$2a$10$Or/j635DVqZvsqHZIxryKujpgXo2Ghe.mjS.6EzmOVXBc4eChvucW', '张三', 'zhangsan@pipeline.com', '13800138001', 'editor', 1),
-('lisi', '$2a$10$Or/j635DVqZvsqHZIxryKujpgXo2Ghe.mjS.6EzmOVXBc4eChvucW', '李四', 'lisi@pipeline.com', '13800138002', 'viewer', 1);
+('admin', '$2a$10$5utyg0Ypj6TyUa.ivfhN2OwMbek1BoajatsOExqIYl48lorLSAwKi', '系统管理员', 'admin@pipeline.com', '13800138000', 'admin', 1),
+('zhangsan', '$2a$10$5utyg0Ypj6TyUa.ivfhN2OwMbek1BoajatsOExqIYl48lorLSAwKi', '张三', 'zhangsan@pipeline.com', '13800138001', 'editor', 1),
+('lisi', '$2a$10$5utyg0Ypj6TyUa.ivfhN2OwMbek1BoajatsOExqIYl48lorLSAwKi', '李四', 'lisi@pipeline.com', '13800138002', 'viewer', 1);
 
 -- 标签
 INSERT INTO `tag` (`name`, `color`) VALUES
