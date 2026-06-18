@@ -61,7 +61,7 @@
             </div>
             <div
               v-for="(item, iIdx) in group.items"
-              :key="item.id"
+              :key="`${group.type}-${item.id}`"
               class="result-item"
               :class="{ active: flatIndex(gIdx, iIdx) === activeIndex }"
               @click="navigateTo(item)"
@@ -72,6 +72,15 @@
                 <span class="result-subtitle">{{ item.subtitle }}</span>
               </div>
               <el-icon class="result-arrow"><ArrowRight /></el-icon>
+            </div>
+            <div
+              v-if="group.items.length < group.total"
+              class="load-more"
+              :class="{ loading: groupLoadingMap[group.type] }"
+              @click.stop="loadMore(group.type)"
+            >
+              <el-icon v-if="groupLoadingMap[group.type]" class="is-loading"><Loading /></el-icon>
+              <span>{{ groupLoadingMap[group.type] ? '加载中...' : '加载更多' }}</span>
             </div>
           </div>
         </template>
@@ -95,13 +104,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, reactive, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search, Loading, Clock, Close, ArrowRight } from '@element-plus/icons-vue'
-import { globalSearch } from '@/api/search'
+import { globalSearch, globalSearchMore } from '@/api/search'
 
 const HISTORY_KEY = 'global_search_history'
 const MAX_HISTORY = 10
+const PAGE_SIZE = 5
 
 const router = useRouter()
 const searchRef = ref(null)
@@ -111,6 +121,8 @@ const loading = ref(false)
 const panelVisible = ref(false)
 const resultGroups = ref([])
 const activeIndex = ref(-1)
+const groupPageMap = reactive({})
+const groupLoadingMap = reactive({})
 
 const userInfo = computed(() => {
   try { return JSON.parse(localStorage.getItem('userInfo') || '{}') } catch { return {} }
@@ -154,6 +166,8 @@ const handleInput = () => {
   if (!keyword.value.trim()) {
     resultGroups.value = []
     activeIndex.value = -1
+    Object.keys(groupPageMap).forEach((k) => delete groupPageMap[k])
+    Object.keys(groupLoadingMap).forEach((k) => delete groupLoadingMap[k])
     return
   }
   debounceTimer = setTimeout(() => {
@@ -165,16 +179,46 @@ const doSearch = async () => {
   if (!keyword.value.trim()) return
   loading.value = true
   activeIndex.value = -1
+  Object.keys(groupPageMap).forEach((k) => delete groupPageMap[k])
+  Object.keys(groupLoadingMap).forEach((k) => delete groupLoadingMap[k])
   try {
     const types = isAdmin.value ? 'pipeline,tag,user,log' : 'pipeline,tag'
-    const res = await globalSearch({ keyword: keyword.value.trim(), types, pageSize: 5 })
+    const res = await globalSearch({ keyword: keyword.value.trim(), types, pageSize: PAGE_SIZE })
     if (res.success) {
       resultGroups.value = res.data.groups || []
+      resultGroups.value.forEach((g) => {
+        groupPageMap[g.type] = 1
+        groupLoadingMap[g.type] = false
+      })
     }
   } catch {
     resultGroups.value = []
   } finally {
     loading.value = false
+  }
+}
+
+const loadMore = async (type) => {
+  if (groupLoadingMap[type]) return
+  const group = resultGroups.value.find((g) => g.type === type)
+  if (!group || group.items.length >= group.total) return
+  const nextPage = (groupPageMap[type] || 1) + 1
+  groupLoadingMap[type] = true
+  try {
+    const res = await globalSearchMore({
+      keyword: keyword.value.trim(),
+      type,
+      page: nextPage,
+      pageSize: PAGE_SIZE
+    })
+    if (res.success && res.data) {
+      const existingIds = new Set(group.items.map((i) => i.id))
+      const newItems = res.data.items.filter((i) => !existingIds.has(i.id))
+      group.items.push(...newItems)
+      groupPageMap[type] = nextPage
+    }
+  } finally {
+    groupLoadingMap[type] = false
   }
 }
 
@@ -186,6 +230,8 @@ const handleClear = () => {
   keyword.value = ''
   resultGroups.value = []
   activeIndex.value = -1
+  Object.keys(groupPageMap).forEach((k) => delete groupPageMap[k])
+  Object.keys(groupLoadingMap).forEach((k) => delete groupLoadingMap[k])
 }
 
 const handleKeydown = (e) => {
@@ -236,6 +282,8 @@ const navigateTo = (item) => {
   keyword.value = ''
   resultGroups.value = []
   activeIndex.value = -1
+  Object.keys(groupPageMap).forEach((k) => delete groupPageMap[k])
+  Object.keys(groupLoadingMap).forEach((k) => delete groupLoadingMap[k])
   if (item.route) {
     router.push(item.route)
   }
@@ -528,5 +576,31 @@ onUnmounted(() => {
 .result-item:hover .result-arrow,
 .result-item.active .result-arrow {
   opacity: 1;
+}
+
+.load-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 12px;
+  color: var(--primary);
+  cursor: pointer;
+  transition: var(--transition);
+  user-select: none;
+}
+
+.load-more:hover {
+  background: var(--bg-hover);
+}
+
+.load-more.loading {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.load-more .el-icon {
+  font-size: 12px;
 }
 </style>
