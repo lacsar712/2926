@@ -40,7 +40,7 @@ const routes = [
                 path: 'monitor',
                 name: 'Monitor',
                 component: () => import('@/views/monitor/MonitorDashboard.vue'),
-                meta: { title: '生产线监控', icon: 'DataLine' }
+                meta: { title: '监控概览', icon: 'DataLine', activeMenu: '/monitor' }
             },
             {
                 path: 'schedule',

@@ -409,6 +409,7 @@ const onPipelineChange = (side) => {
   } else {
     selectedRun2.value = null
   }
+  compareData.value = null
   loadRuns(side)
 }
 

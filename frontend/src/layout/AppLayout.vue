@@ -35,10 +35,20 @@
           <el-icon><Operation /></el-icon>
           <template #title>生产线管理</template>
         </el-menu-item>
-        <el-menu-item index="/monitor">
-          <el-icon><DataLine /></el-icon>
-          <template #title>生产线监控</template>
-        </el-menu-item>
+        <el-sub-menu index="/monitor">
+          <template #title>
+            <el-icon><DataLine /></el-icon>
+            <span>生产线监控</span>
+          </template>
+          <el-menu-item index="/monitor">
+            <el-icon><DataLine /></el-icon>
+            <template #title>监控概览</template>
+          </el-menu-item>
+          <el-menu-item index="/monitor/compare">
+            <el-icon><DataAnalysis /></el-icon>
+            <template #title>运行对比</template>
+          </el-menu-item>
+        </el-sub-menu>
         <el-menu-item index="/schedule">
           <el-icon><Timer /></el-icon>
           <template #title>调度任务</template>
