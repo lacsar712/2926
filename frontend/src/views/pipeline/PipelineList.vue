@@ -110,10 +110,13 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '@/utils/request'
 import dayjs from 'dayjs'
+import { usePreferenceStore } from '@/stores/preference'
+
+const preferenceStore = usePreferenceStore()
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -121,7 +124,7 @@ const list = ref([])
 const tags = ref([])
 const total = ref(0)
 const currentPage = ref(1)
-const pageSize = 12
+const pageSize = computed(() => preferenceStore.pageSize)
 const dialogVisible = ref(false)
 const editId = ref(null)
 const formRef = ref()
@@ -140,7 +143,7 @@ const truncateText = (text, max = 60) => {
 const loadList = async () => {
   loading.value = true
   try {
-    const res = await api.get('/pipelines', { params: { ...filters, page: currentPage.value, pageSize } })
+    const res = await api.get('/pipelines', { params: { ...filters, page: currentPage.value, pageSize: pageSize.value } })
     list.value = res.data.list
     total.value = res.data.total
   } catch { /* handled */ } finally { loading.value = false }

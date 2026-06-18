@@ -31,15 +31,18 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import api from '@/utils/request'
 import dayjs from 'dayjs'
+import { usePreferenceStore } from '@/stores/preference'
+
+const preferenceStore = usePreferenceStore()
 
 const loading = ref(false)
 const list = ref([])
 const total = ref(0)
 const page = ref(1)
-const pageSize = 20
+const pageSize = computed(() => preferenceStore.pageSize)
 const filters = reactive({ username: '', action: '' })
 const formatDate = (d) => d ? dayjs(d).format('YYYY-MM-DD HH:mm:ss') : '-'
 const getActionType = (action) => {
@@ -53,7 +56,7 @@ const getActionType = (action) => {
 const loadList = async () => {
   loading.value = true
   try {
-    const res = await api.get('/logs', { params: { ...filters, page: page.value, pageSize } })
+    const res = await api.get('/logs', { params: { ...filters, page: page.value, pageSize: pageSize.value } })
     list.value = res.data.list
     total.value = res.data.total
   } catch { /* handled */ } finally { loading.value = false }

@@ -155,9 +155,11 @@ import {
 } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 import { useNotificationStore } from '@/stores/notification'
+import { usePreferenceStore } from '@/stores/preference'
 
 const router = useRouter()
 const notificationStore = useNotificationStore()
+const preferenceStore = usePreferenceStore()
 
 const loading = computed(() => notificationStore.loading)
 const notificationList = computed(() => notificationStore.notificationList)
@@ -167,7 +169,7 @@ const unreadCount = computed(() => notificationStore.unreadCount)
 const filterType = ref('')
 const filterRead = ref('')
 const page = ref(1)
-const pageSize = ref(10)
+const pageSize = ref(preferenceStore.pageSize)
 const selectedIds = ref([])
 
 const hasReadNotifications = computed(() => {
@@ -232,6 +234,7 @@ const handleFilterChange = () => {
 }
 
 const handlePageChange = () => {
+  preferenceStore.setPageSize(pageSize.value)
   fetchData()
 }
 

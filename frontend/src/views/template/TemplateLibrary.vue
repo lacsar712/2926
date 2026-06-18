@@ -328,15 +328,17 @@ import {
   updateTemplateStatus
 } from '@/api/template'
 import dayjs from 'dayjs'
+import { usePreferenceStore } from '@/stores/preference'
 
 const router = useRouter()
+const preferenceStore = usePreferenceStore()
 const loading = ref(false)
 const submitting = ref(false)
 const list = ref([])
 const categories = ref([])
 const total = ref(0)
 const currentPage = ref(1)
-const pageSize = 12
+const pageSize = computed(() => preferenceStore.pageSize)
 
 const detailVisible = ref(false)
 const currentTemplate = ref(null)
@@ -385,7 +387,7 @@ const loadList = async () => {
     const params = {
       ...filters,
       page: currentPage.value,
-      pageSize
+      pageSize: pageSize.value
     }
     if (isAdmin.value && !showAll.value) {
       params.status = 'online'

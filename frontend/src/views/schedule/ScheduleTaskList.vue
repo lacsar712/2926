@@ -251,7 +251,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
@@ -276,8 +276,10 @@ import {
 } from '@/api/schedule'
 import CronHelper from '@/components/CronHelper.vue'
 import ExecutionHistoryDrawer from '@/components/ExecutionHistoryDrawer.vue'
+import { usePreferenceStore } from '@/stores/preference'
 
 const router = useRouter()
+const preferenceStore = usePreferenceStore()
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -286,7 +288,7 @@ const list = ref([])
 const pipelines = ref([])
 const total = ref(0)
 const currentPage = ref(1)
-const pageSize = 10
+const pageSize = computed(() => preferenceStore.pageSize)
 const dialogVisible = ref(false)
 const editId = ref(null)
 const formRef = ref()
@@ -355,7 +357,7 @@ const loadList = async () => {
     const res = await getScheduleTasks({
       ...filters,
       page: currentPage.value,
-      pageSize
+      pageSize: pageSize.value
     })
     if (res.success) {
       list.value = res.data.list

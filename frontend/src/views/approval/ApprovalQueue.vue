@@ -107,7 +107,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
 import {
@@ -116,13 +116,16 @@ import {
   approveRecord,
   rejectRecord
 } from '@/api/approval'
+import { usePreferenceStore } from '@/stores/preference'
+
+const preferenceStore = usePreferenceStore()
 
 const loading = ref(false)
 const list = ref([])
 const stats = reactive({ todo: 0, done: 0, mine: 0 })
 const total = ref(0)
 const currentPage = ref(1)
-const pageSize = 10
+const pageSize = computed(() => preferenceStore.pageSize)
 const tab = ref('todo')
 const statusFilter = ref('')
 const remarkMap = reactive({})
@@ -142,7 +145,7 @@ const loadStats = async () => {
 const loadList = async () => {
   loading.value = true
   try {
-    const params = { tab: tab.value, page: currentPage.value, pageSize }
+    const params = { tab: tab.value, page: currentPage.value, pageSize: pageSize.value }
     if (statusFilter.value) params.status = statusFilter.value
     const res = await getApprovalList(params)
     list.value = res.data.list

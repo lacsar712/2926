@@ -68,17 +68,20 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '@/utils/request'
 import dayjs from 'dayjs'
+import { usePreferenceStore } from '@/stores/preference'
+
+const preferenceStore = usePreferenceStore()
 
 const loading = ref(false)
 const submitting = ref(false)
 const list = ref([])
 const total = ref(0)
 const page = ref(1)
-const pageSize = 10
+const pageSize = computed(() => preferenceStore.pageSize)
 const keyword = ref('')
 const roleFilter = ref('')
 const dialogVisible = ref(false)
@@ -97,7 +100,7 @@ const formRules = {
 const loadList = async () => {
   loading.value = true
   try {
-    const res = await api.get('/users', { params: { keyword: keyword.value, role: roleFilter.value, page: page.value, pageSize } })
+    const res = await api.get('/users', { params: { keyword: keyword.value, role: roleFilter.value, page: page.value, pageSize: pageSize.value } })
     list.value = res.data.list
     total.value = res.data.total
   } catch { /* handled */ } finally { loading.value = false }
