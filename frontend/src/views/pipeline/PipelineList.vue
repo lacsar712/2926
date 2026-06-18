@@ -2,9 +2,14 @@
   <div class="page-container">
     <div class="page-header fade-in-up">
       <h2 class="page-title">生产线管理</h2>
-      <el-button type="primary" @click="openDialog()">
-        <el-icon><Plus /></el-icon>新建生产线
-      </el-button>
+      <div class="header-actions">
+        <el-button type="primary" plain @click="$router.push('/templates')">
+          <el-icon><Collection /></el-icon>从模板创建
+        </el-button>
+        <el-button type="primary" @click="openDialog()">
+          <el-icon><Plus /></el-icon>新建生产线
+        </el-button>
+      </div>
     </div>
 
     <!-- 搜索过滤 -->
@@ -185,6 +190,10 @@ onMounted(() => { loadList(); loadTags() })
 </script>
 
 <style scoped>
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
 .filter-bar {
   display: flex;
   gap: 12px;

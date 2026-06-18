@@ -140,7 +140,18 @@
                 上架
               </el-button>
             </template>
+            <el-tooltip v-if="!canUseTemplate" content="仅编辑者及以上角色可使用模板" placement="top">
+              <el-button
+                size="small"
+                type="primary"
+                disabled
+                @click.stop="() => {}"
+              >
+                <el-icon><MagicStick /></el-icon>使用模板
+              </el-button>
+            </el-tooltip>
             <el-button
+              v-else
               size="small"
               type="primary"
               :disabled="item.status === 'offline' && !isAdmin"
@@ -246,7 +257,16 @@
               上架模板
             </el-button>
           </template>
+          <el-tooltip v-if="!canUseTemplate" content="仅编辑者及以上角色可使用模板" placement="top">
+            <el-button
+              type="primary"
+              disabled
+            >
+              <el-icon><MagicStick /></el-icon>使用此模板
+            </el-button>
+          </el-tooltip>
           <el-button
+            v-else
             type="primary"
             :disabled="currentTemplate.status === 'offline' && !isAdmin"
             @click="openUseDialog(currentTemplate); detailVisible = false;"
@@ -339,6 +359,7 @@ const userInfo = computed(() => {
 })
 
 const isAdmin = computed(() => userInfo.value?.role === 'admin')
+const canUseTemplate = computed(() => ['admin', 'editor'].includes(userInfo.value?.role))
 
 const filters = reactive({
   keyword: '',
