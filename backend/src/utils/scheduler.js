@@ -6,26 +6,135 @@ const activeTasks = new Map();
 
 const parseCronToNodeCron = (cronExpr) => {
     const parts = cronExpr.trim().split(/\s+/);
+    let minute, hour, day, month, week;
+    
     if (parts.length === 6) {
-        return parts.slice(0, 5).join(' ');
+        [, minute, hour, day, month, week] = parts;
+    } else if (parts.length === 5) {
+        [minute, hour, day, month, week] = parts;
+    } else {
+        return cronExpr;
     }
-    return cronExpr;
+    
+    if (day === '?') day = '*';
+    if (week === '?') week = '*';
+    
+    const weekDayMap = {
+        'SUN': 0, 'MON': 1, 'TUE': 2, 'WED': 3, 'THU': 4, 'FRI': 5, 'SAT': 6,
+        'sun': 0, 'mon': 1, 'tue': 2, 'wed': 3, 'thu': 4, 'fri': 5, 'sat': 6
+    };
+    
+    const convertWeekValue = (val) => {
+        if (val === '*') return '*';
+        
+        const convertSingle = (v) => {
+            if (weekDayMap[v] !== undefined) return weekDayMap[v];
+            const num = parseInt(v);
+            return isNaN(num) ? v : (num === 7 ? 0 : num - 1);
+        };
+        
+        if (val.includes(',')) {
+            return val.split(',').map(convertSingle).join(',');
+        }
+        if (val.includes('-')) {
+            const [start, end] = val.split('-').map(convertSingle);
+            return `${start}-${end}`;
+        }
+        if (val.includes('/')) {
+            return val;
+        }
+        return convertSingle(val);
+    };
+    
+    week = convertWeekValue(week);
+    
+    return `${minute} ${hour} ${day} ${month} ${week}`;
 };
 
 const calculateNextRunTime = (cronExpr) => {
     try {
         const nodeCronExpr = parseCronToNodeCron(cronExpr);
-        const task = cron.schedule(nodeCronExpr, () => {}, { scheduled: false });
-        const nextDates = task.nextDates(1);
-        task.stop();
-        if (nextDates && nextDates.length > 0) {
-            return nextDates[0].toDate();
+        if (!cron.validate(nodeCronExpr)) {
+            return null;
         }
-        return null;
+        const now = new Date();
+        const nextDate = getNextCronTime(nodeCronExpr, now);
+        return nextDate;
     } catch (error) {
         logger.error('Calculate next run time error:', { cronExpr, error: error.message });
         return null;
     }
+};
+
+const getNextCronTime = (cronExpr, fromDate) => {
+    const parts = cronExpr.split(' ');
+    if (parts.length !== 5) return null;
+    
+    const [minuteExpr, hourExpr, dayExpr, monthExpr, weekExpr] = parts;
+    
+    const weekDayMap = {
+        'SUN': 0, 'MON': 1, 'TUE': 2, 'WED': 3, 'THU': 4, 'FRI': 5, 'SAT': 6,
+        'sun': 0, 'mon': 1, 'tue': 2, 'wed': 3, 'thu': 4, 'fri': 5, 'sat': 6
+    };
+    
+    const parseField = (expr, min, max, isWeek = false) => {
+        const values = [];
+        const parseValue = (v) => {
+            if (isWeek && weekDayMap[v] !== undefined) return weekDayMap[v];
+            const num = parseInt(v);
+            return isNaN(num) ? v : num;
+        };
+        if (expr === '*') {
+            for (let i = min; i <= max; i++) values.push(i);
+        } else if (expr.includes('/')) {
+            const [range, step] = expr.split('/');
+            const stepNum = parseInt(step);
+            let start = min;
+            let end = max;
+            if (range !== '*') {
+                [start, end] = range.includes('-') ? range.split('-').map(v => parseValue(v)) : [parseValue(range), max];
+            }
+            for (let i = start; i <= end; i += stepNum) values.push(i);
+        } else if (expr.includes(',')) {
+            expr.split(',').forEach(v => values.push(parseValue(v)));
+        } else if (expr.includes('-')) {
+            const [start, end] = expr.split('-').map(v => parseValue(v));
+            for (let i = start; i <= end; i++) values.push(i);
+        } else {
+            values.push(parseValue(expr));
+        }
+        return values;
+    };
+    
+    const minutes = parseField(minuteExpr, 0, 59);
+    const hours = parseField(hourExpr, 0, 23);
+    const days = parseField(dayExpr, 1, 31);
+    const months = parseField(monthExpr, 1, 12);
+    const weeks = parseField(weekExpr, 0, 6, true);
+    
+    const next = new Date(fromDate);
+    next.setSeconds(0, 0);
+    next.setMinutes(next.getMinutes() + 1);
+    
+    for (let i = 0; i < 525600; i++) {
+        const month = next.getMonth() + 1;
+        const day = next.getDate();
+        const weekDay = next.getDay();
+        const hour = next.getHours();
+        const minute = next.getMinutes();
+        
+        if (months.includes(month) && 
+            days.includes(day) && 
+            weeks.includes(weekDay) &&
+            hours.includes(hour) && 
+            minutes.includes(minute)) {
+            return next;
+        }
+        
+        next.setMinutes(next.getMinutes() + 1);
+    }
+    
+    return null;
 };
 
 const executeTask = async (task) => {

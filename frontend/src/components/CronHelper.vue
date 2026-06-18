@@ -171,7 +171,7 @@ const parseCronToHuman = (cron) => {
   if (parts.length < 5) return '无效的cron表达式'
 
   let desc = ''
-  const [minute, hour, day, month, week, second] = parts.length === 6 ? parts : ['0', ...parts]
+  const [second, minute, hour, day, month, week] = parts.length === 6 ? parts : ['0', ...parts]
 
   if (minute === '*') desc += '每分钟 '
   else if (minute.includes('/')) desc += `每${minute.split('/')[1]}分钟 `
