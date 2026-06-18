@@ -60,6 +60,10 @@
             <el-icon><Document /></el-icon>
             <template #title>操作日志</template>
           </el-menu-item>
+          <el-menu-item index="/system/quality-rule">
+            <el-icon><DataAnalysis /></el-icon>
+            <template #title>数据质量规则</template>
+          </el-menu-item>
           <el-menu-item index="/system/component-doc">
             <el-icon><Notebook /></el-icon>
             <template #title>组件文档管理</template>

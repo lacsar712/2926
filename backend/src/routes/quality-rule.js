@@ -30,7 +30,7 @@ router.get('/', async (req, res) => {
             SELECT qr.*, u.nickname AS updater_name,
                    (SELECT COUNT(*) FROM quality_rule WHERE 1=1) AS total_count
             FROM quality_rule qr
-            LEFT JOIN sys_user u ON qr.creator_id = u.id
+            LEFT JOIN sys_user u ON qr.updater_id = u.id
             WHERE 1=1
         `;
         const params = [];
@@ -140,8 +140,8 @@ router.post('/', roleGuard('admin', 'editor'), async (req, res) => {
         }
 
         const result = await db.query(
-            'INSERT INTO quality_rule (name, description, rule_type, expression, severity, enabled, creator_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [name, description || '', rule_type, expression || null, severity, enabled !== undefined ? enabled : 1, req.user.id]
+            'INSERT INTO quality_rule (name, description, rule_type, expression, severity, enabled, creator_id, updater_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [name, description || '', rule_type, expression || null, severity, enabled !== undefined ? enabled : 1, req.user.id, req.user.id]
         );
         logger.info('Quality rule created:', { id: result.insertId, name, username: req.user.username });
         await db.query(
@@ -163,8 +163,8 @@ router.put('/:id', roleGuard('admin', 'editor'), async (req, res) => {
             return res.status(404).json({ success: false, message: '规则不存在' });
         }
         await db.query(
-            `UPDATE quality_rule SET name = ?, description = ?, rule_type = ?, expression = ?, severity = ?, enabled = ? WHERE id = ?`,
-            [name, description || '', rule_type, expression || null, severity, enabled !== undefined ? enabled : 1, req.params.id]
+            `UPDATE quality_rule SET name = ?, description = ?, rule_type = ?, expression = ?, severity = ?, enabled = ?, updater_id = ? WHERE id = ?`,
+            [name, description || '', rule_type, expression || null, severity, enabled !== undefined ? enabled : 1, req.user.id, req.params.id]
         );
         logger.info('Quality rule updated:', { id: req.params.id, username: req.user.username });
         await db.query(
@@ -185,7 +185,7 @@ router.put('/:id/status', roleGuard('admin', 'editor'), async (req, res) => {
         if (existing.length === 0) {
             return res.status(404).json({ success: false, message: '规则不存在' });
         }
-        await db.query('UPDATE quality_rule SET enabled = ? WHERE id = ?', [enabled ? 1 : 0, req.params.id]);
+        await db.query('UPDATE quality_rule SET enabled = ?, updater_id = ? WHERE id = ?', [enabled ? 1 : 0, req.user.id, req.params.id]);
         res.json({ success: true, message: '状态更新成功' });
     } catch (error) {
         logger.error('Toggle quality rule status error:', { message: error.message });
